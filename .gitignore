@@ -1,0 +1,10 @@
+*.class
+target/*
+project/target/*
+project/project/target/*
+.DS_Store
+tmp/*
+sbt-ethereum.log
+
+
+
