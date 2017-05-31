@@ -2,10 +2,12 @@ package com.mchange.sc.v2.ens
 
 import java.io.File
 
+import scala.collection._
+
 import scala.io.{Codec,Source}
 
 import com.mchange.sc.v1.consuela._
-import com.mchange.sc.v1.consuela.ethereum.EthHash
+import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash}
 import com.mchange.sc.v2.io.RichFile
 import com.mchange.sc.v2.lang.borrow
 
@@ -22,11 +24,11 @@ object DirectoryBidStore {
 
   def bidString( bid : Bid ) = {
     import bid._
-    s"${bidHash.hex}|${simpleName}|${nameHash.hex}|${valueInWei}|${salt.hex}|${timestamp}" + System.lineSeparator
+    s"${bidHash.hex}|${simpleName}|${bidderAddress}|${valueInWei}|${salt.hex}|${timestamp}" + System.lineSeparator
   }
   def parseBidString( line : String ) : Bid = {
     val split = line.split("""\s*\|\s*""")
-    Bid( EthHash.withBytes( split(0).decodeHex ), split(1), EthHash.withBytes( split(2).decodeHex ), BigInt( split(3) ), split(4).decodeHexAsSeq, split(5).toLong )
+    Bid( EthHash.withBytes( split(0).decodeHex ), split(1), EthAddress( split(2) ), BigInt( split(3) ), split(4).decodeHexAsSeq, split(5).toLong )
   }
 }
 class DirectoryBidStore( dir : File ) extends BidStore {
@@ -51,16 +53,11 @@ class DirectoryBidStore( dir : File ) extends BidStore {
     bidFile.appendContents( state.toString + System.lineSeparator )
   }
 
-  def markAccepted( bidHash : EthHash ) : Unit = mark( bidHash, BidStore.State.Accepted )
+  def markAccepted( bidHash : EthHash )  : Unit = mark( bidHash, BidStore.State.Accepted )
 
-  def markRevealed( bidHash : EthHash ) : Unit = mark( bidHash, BidStore.State.Revealed )
+  def markRevealed( bidHash : EthHash )  : Unit = mark( bidHash, BidStore.State.Revealed )
 
-  def find( bidHash : EthHash ) : ( Bid, BidStore.State ) = {
-
-    val bidFile = new File( dir, bidHash.hex )
-
-    require( bidFile.exists(), s"Bid with hash '${bidHash.hex}' unknown!" )
-
+  private def readFile( bidFile : File ) : ( Bid, BidStore.State ) = {
     borrow( Source.fromFile( bidFile, BufferSize )( Codec.UTF8 ) )( _.close ) { source =>
       val goodLines = source.getLines().toVector.map( _.trim ).filter( line => !line.startsWith("#") ).filter( _.length > 0 )
       val bid = parseBidString( goodLines.head )
@@ -68,5 +65,18 @@ class DirectoryBidStore( dir : File ) extends BidStore {
 
       ( bid, state )
     }
+  }
+
+  def findByHash( bidHash : EthHash ) : ( Bid, BidStore.State ) = {
+
+    val bidFile = new File( dir, bidHash.hex )
+
+    require( bidFile.exists(), s"Bid with hash '${bidHash.hex}' unknown!" )
+
+    readFile( bidFile )
+  }
+
+  def findByName( simpleName : String ) : immutable.Seq[ ( Bid, BidStore.State ) ] = {
+    dir.listFiles.map( readFile ).toVector
   }
 }
