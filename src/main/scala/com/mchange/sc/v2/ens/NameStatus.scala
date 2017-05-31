@@ -12,17 +12,17 @@ package com.mchange.sc.v2.ens
 //   Reveal -> Open (if nobody bid)
 //   Owned -> Open (releaseDeed or invalidateName)
 
-final object BidStatus {
-  final case object Open            extends BidStatus( 0 )
-  final case object Auction         extends BidStatus( 1 )
-  final case object Owned           extends BidStatus( 2 )
-  final case object Forbidden       extends BidStatus( 3 )
-  final case object Reveal          extends BidStatus( 4 )
-  final case object NotYetAvailable extends BidStatus( 5 )
+final object NameStatus {
+  final case object Open            extends NameStatus( 0 )
+  final case object Auction         extends NameStatus( 1 )
+  final case object Owned           extends NameStatus( 2 )
+  final case object Forbidden       extends NameStatus( 3 )
+  final case object Reveal          extends NameStatus( 4 )
+  final case object NotYetAvailable extends NameStatus( 5 )
 
   val byCode = {
     val statuses = Open :: Auction :: Owned :: Forbidden :: Reveal :: NotYetAvailable :: Nil
       statuses.map( status => ( status.code, status ) ).toMap
   }
 }
-sealed abstract class BidStatus( val code : Int );
+sealed abstract class NameStatus( val code : Int );

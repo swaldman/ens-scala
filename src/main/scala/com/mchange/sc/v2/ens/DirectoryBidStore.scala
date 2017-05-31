@@ -1,0 +1,72 @@
+package com.mchange.sc.v2.ens
+
+import java.io.File
+
+import scala.io.{Codec,Source}
+
+import com.mchange.sc.v1.consuela._
+import com.mchange.sc.v1.consuela.ethereum.EthHash
+import com.mchange.sc.v2.io.RichFile
+import com.mchange.sc.v2.lang.borrow
+
+
+/**
+  *  This is a toy bidstore. You'll probably want something better.
+  * 
+  *  As the state of the bid changes, we append a later state, without
+  *  eliminating prior states. We don't want to risk an overwrite that might
+  *  lead to a loss of the bid information.
+  */ 
+object DirectoryBidStore {
+  val BufferSize = 8 * 1024
+
+  def bidString( bid : Bid ) = {
+    import bid._
+    s"${bidHash.hex}|${simpleName}|${nameHash.hex}|${valueInWei}|${salt.hex}|${timestamp}" + System.lineSeparator
+  }
+  def parseBidString( line : String ) : Bid = {
+    val split = line.split("""\s*\|\s*""")
+    Bid( EthHash.withBytes( split(0).decodeHex ), split(1), EthHash.withBytes( split(2).decodeHex ), BigInt( split(3) ), split(4).decodeHexAsSeq, split(5).toLong )
+  }
+}
+class DirectoryBidStore( dir : File ) extends BidStore {
+  import DirectoryBidStore._
+
+  dir.mkdirs()
+  require( dir.isDirectory && dir.canWrite, "DirectoryBidStore storage directory must exist or be creatable, and be writable. '${dir}' is not." )
+
+  def store( bid : Bid ) : Unit = {
+    val bidFile = new File( dir, bid.bidHash.hex )
+    bidFile.replaceContents( bidString( bid ) + BidStore.State.Created + "\n", Codec.UTF8 )
+  }
+  def remove( bid : Bid ) : Unit = {
+    val bidFile = new File( dir, bid.bidHash.hex )
+    bidFile.delete()
+  }
+  private def mark( bidHash : EthHash, state : BidStore.State ) : Unit = {
+    val bidFile = new File( dir, bidHash.hex )
+
+    require( bidFile.exists(), s"Bid with hash '${bidHash.hex}' unknown!" )
+
+    bidFile.appendContents( state.toString + System.lineSeparator )
+  }
+
+  def markAccepted( bidHash : EthHash ) : Unit = mark( bidHash, BidStore.State.Accepted )
+
+  def markRevealed( bidHash : EthHash ) : Unit = mark( bidHash, BidStore.State.Revealed )
+
+  def find( bidHash : EthHash ) : ( Bid, BidStore.State ) = {
+
+    val bidFile = new File( dir, bidHash.hex )
+
+    require( bidFile.exists(), s"Bid with hash '${bidHash.hex}' unknown!" )
+
+    borrow( Source.fromFile( bidFile, BufferSize )( Codec.UTF8 ) )( _.close ) { source =>
+      val goodLines = source.getLines().toVector.map( _.trim ).filter( line => !line.startsWith("#") ).filter( _.length > 0 )
+      val bid = parseBidString( goodLines.head )
+      val state = BidStore.State.fromString( goodLines.last ).get // assert that the state can be found
+
+      ( bid, state )
+    }
+  }
+}

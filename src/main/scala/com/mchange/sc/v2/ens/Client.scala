@@ -15,7 +15,7 @@ import stub.Sender
 object Client {
   def apply( ethJsonRpcUrl : String )( implicit econtext : ExecutionContext ) = new Client()( Invoker.Context( ethJsonRpcUrl ), econtext )
 }
-class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld : String = "eth" )( implicit icontext : Invoker.Context, econtext : ExecutionContext ) extends stub.Utilities {
+class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld : String = "eth", reverseTld : String = "addr.reverse" )( implicit icontext : Invoker.Context, econtext : ExecutionContext ) extends stub.Utilities {
   lazy val nameService = ENS( nameServiceAddress )
 
   private def stubnamehash( name : String ) : sol.Bytes32 = sol.Bytes32( namehash( name ).bytes )
@@ -42,12 +42,12 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
 
   lazy val registrar : Registrar = new Registrar( owner( tld ).get ) // we assert that it exists
 
-  lazy val reverseRegistrar : ReverseRegistrar = new ReverseRegistrar( owner( "addr.reverse" ).get ) // we assert that it exists
+  lazy val reverseRegistrar : ReverseRegistrar = new ReverseRegistrar( owner( reverseTld ).get ) // we assert that it exists
 
-  def bidStatus( simpleName : String ) : BidStatus = {
+  def nameStatus( simpleName : String ) : NameStatus = {
     val normalized = normalizeName( simpleName )
     val code = registrar.constant.state( simplehash( normalized ) )( Sender.Default )
-    BidStatus.byCode( code.widen )
+    NameStatus.byCode( code.widen )
   }
 
   // note that at the auction registrar, standard Ethereum Keccak hashes, rather than namehashes, are used
@@ -63,9 +63,9 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
     deDotTld( name.toLowerCase ) ensuring ( _.indexOf('.') < 0, s"We expect a simple name (with no '.' characters) or else a <simple-name>.${tld}. Bad name: ${name}." )
   }
 
-  class Auctioneer( from : EthSigner ) {
+  class Auctioneer( bidder : EthSigner, store : BidStore ) {
 
-    private implicit val sender = stub.Sender.Basic( from )
+    private implicit val sender = stub.Sender.Basic( bidder )
 
     private lazy val entropy = new java.security.SecureRandom
 
@@ -90,11 +90,16 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
 
     def newSalt = randomHash.bytes
 
-    private def sealedBid( name : String, valueInWei : BigInt , salt : immutable.Seq[Byte] ) : EthHash = {
-      val normalized = normalizeName( name )
+    private def sealedBid( normalized : String, valueInWei : BigInt , salt : immutable.Seq[Byte] ) : EthHash = {
       val address = sender.address
       val bytes32 = registrar.constant.shaBid( simplehash( normalized ), sender.address, sol.UInt256( valueInWei ), sol.Bytes32( salt ) )
       EthHash.withBytes( bytes32.widen )
+    }
+
+    def newBid( name : String, valueInWei : BigInt, overpaymentInWei : BigInt = 0 ) : Unit = {
+      val normalized = normalizeName( name )
+      val salt = randomHash
+      val bid = sealedBid( normalized, valueInWei, salt.bytes )
     }
   }
 }

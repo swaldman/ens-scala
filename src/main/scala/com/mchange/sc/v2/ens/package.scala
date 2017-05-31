@@ -10,6 +10,7 @@ import com.mchange.sc.v1.consuela.ethereum.EthHash
   *  See https://github.com/ethereum/EIPs/issues/137
   */ 
 package object ens {
+  class EnsException( message : String, cause : Throwable = null ) extends Exception( message, cause )
 
   private val NullHash = EthHash.withBytes( Array.fill[Byte](32)(0.toByte) )
 
