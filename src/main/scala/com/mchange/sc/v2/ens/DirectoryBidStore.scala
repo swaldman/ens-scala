@@ -28,7 +28,7 @@ object DirectoryBidStore {
 
   def bidString( bid : Bid ) = {
     import bid._
-    s"${bidHash.hex}|${simpleName}|${bidderAddress}|${valueInWei}|${salt.hex}|${timestamp}" + System.lineSeparator
+    s"${bidHash.hex}|${simpleName}|${bidderAddress.hex}|${valueInWei}|${salt.hex}|${timestamp}" + System.lineSeparator
   }
   def parseBidString( line : String ) : Bid = {
     val split = line.split("""\s*\|\s*""")
