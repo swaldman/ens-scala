@@ -19,7 +19,8 @@ object Client {
   def apply( ethJsonRpcUrl : String )( implicit econtext : ExecutionContext ) = new Client()( Invoker.Context( ethJsonRpcUrl ), econtext )
 }
 class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld : String = "eth", reverseTld : String = "addr.reverse" )( implicit icontext : Invoker.Context, econtext : ExecutionContext ) extends stub.Utilities {
-  lazy val nameService = ENS( nameServiceAddress )
+
+  private lazy val nameService = ENS( nameServiceAddress )
 
   private def stubnamehash( name : String ) : sol.Bytes32 = sol.Bytes32( namehash( name ).bytes )
 
@@ -43,9 +44,9 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
     }
   }
 
-  lazy val registrar : Registrar = new Registrar( owner( tld ).get ) // we assert that it exists
+  private lazy val registrar : Registrar = new Registrar( owner( tld ).get ) // we assert that it exists
 
-  lazy val reverseRegistrar : ReverseRegistrar = new ReverseRegistrar( owner( reverseTld ).get ) // we assert that it exists
+  private lazy val reverseRegistrar : ReverseRegistrar = new ReverseRegistrar( owner( reverseTld ).get ) // we assert that it exists
 
   def nameStatus( name : String ) : NameStatus = {
     val normalized = normalizeName( name )
@@ -99,7 +100,11 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
 
     def forEthSigner( bidder : EthSigner )(implicit store : BidStore ) : Auctioneer = new Auctioneer( bidder )( store )
 
-    def forHexPrivateKey( hex : String )(implicit store : BidStore ) : Auctioneer = forEthSigner( EthPrivateKey( hex ) )( store )
+    def forPrivateKey( privateKey : EthPrivateKey )(implicit store : BidStore ) : Auctioneer = forEthSigner( privateKey )( store )
+
+    def forPrivateKey( hex : String )(implicit store : BidStore ) : Auctioneer = forEthSigner( EthPrivateKey( hex ) )( store )
+
+    def forPrivateKey( s : BigInt )(implicit store : BidStore ) : Auctioneer = forEthSigner( EthPrivateKey( s ) )( store )
 
     def forWalletV3( wv3 : wallet.V3, passcode : String )(implicit store : BidStore ) : Auctioneer = forEthSigner( wv3.decode( passcode ) )( store )
 
@@ -118,6 +123,8 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
       EthHash.withBytes( raw )
     }
 
+    lazy val bidderAddress = sender.address
+
     def startAuction( name : String, numDiversions : Int = 0 ) : Unit = {
       val normalized = normalizeName( name )
 
@@ -131,7 +138,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
       requireTransactionReceipt( txnhash ) // just keeping things synchronous... if this returns without error, the call has succeeded
     }
 
-    def newSalt = randomHash.bytes
+    private def newSalt = randomHash.bytes
 
     private def sealedBid( normalized : String, address : EthAddress, valueInWei : BigInt , salt : immutable.Seq[Byte] ) : EthHash = {
       val bytes32 = registrar.constant.shaBid( simplehash( normalized ), sender.address, sol.UInt256( valueInWei ), sol.Bytes32( salt ) )

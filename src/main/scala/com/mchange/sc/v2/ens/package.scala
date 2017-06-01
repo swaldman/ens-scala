@@ -3,14 +3,16 @@ package com.mchange.sc.v2
 import java.net.IDN
 import java.nio.charset.StandardCharsets.US_ASCII
 
-import com.mchange.sc.v1.consuela.ethereum.EthAddress
-import com.mchange.sc.v1.consuela.ethereum.EthHash
+import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash}
+import com.mchange.sc.v1.consuela.ethereum.specification.Denominations
 
 /**
   *  See https://github.com/ethereum/EIPs/issues/137
   */ 
 package object ens {
   class EnsException( message : String, cause : Throwable = null ) extends Exception( message, cause )
+
+  final case object denominations extends Denominations
 
   private val NullHash = EthHash.withBytes( Array.fill[Byte](32)(0.toByte) )
 
