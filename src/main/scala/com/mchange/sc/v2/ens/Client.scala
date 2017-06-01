@@ -2,10 +2,13 @@ package com.mchange.sc.v2.ens
 
 import contract._
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit.DAYS
+
 import scala.collection._
 import scala.concurrent.ExecutionContext
 
-import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash,EthSigner}
+import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash,EthPrivateKey,EthSigner,wallet}
 import com.mchange.sc.v1.consuela.ethereum.jsonrpc20.Invoker
 
 import com.mchange.sc.v1.consuela.ethereum.ethabi.stub
@@ -50,6 +53,19 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
     NameStatus.byCode( code.widen )
   }
 
+  def auctionEnd( name : String ) : Option[Instant] = {
+    nameStatus( name ) match {
+      case NameStatus.Auction => {
+        val normalized = normalizeName( name )
+        val entries = registrar.constant.entries( simplehash( normalized ) )( Sender.Default )
+        Some( Instant.ofEpochSecond( entries._3.widen.toLong ) )
+      }
+      case _ => None
+    }
+  }
+
+  def revealStart( name : String ) : Option[Instant] = auctionEnd( name ).map( _.minus( 2, DAYS ) )
+
   def transferName( from : EthSigner, to : EthAddress, name : String ) : Unit = {
     val normalized = normalizeName( name )
 
@@ -79,7 +95,18 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
     deDotTld( name.toLowerCase ) ensuring ( _.indexOf('.') < 0, s"We expect a simple name (with no '.' characters) or else a <simple-name>.${tld}. Bad name: ${name}." )
   }
 
-  class Auctioneer( bidder : EthSigner, store : BidStore ) {
+  object Auctioneer {
+
+    def forEthSigner( bidder : EthSigner )(implicit store : BidStore ) : Auctioneer = new Auctioneer( bidder )( store )
+
+    def forHexPrivateKey( hex : String )(implicit store : BidStore ) : Auctioneer = forEthSigner( EthPrivateKey( hex ) )( store )
+
+    def forWalletV3( wv3 : wallet.V3, passcode : String )(implicit store : BidStore ) : Auctioneer = forEthSigner( wv3.decode( passcode ) )( store )
+
+    def forWalletV3( json : String, passcode : String )(implicit store : BidStore ) : Auctioneer = forWalletV3( wallet.V3( json ), passcode )( store )
+
+  }
+  class Auctioneer( bidder : EthSigner )( implicit store : BidStore ) {
 
     private implicit val sender = stub.Sender.Basic( bidder )
 
@@ -120,7 +147,16 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
       val bid = Bid( bidHash, normalized, sender.address, valueInWei, saltBytes, System.currentTimeMillis )
       store.store( bid ) // no matter what, persist what will be needed to reconstruct the bid hash!
 
-      val txnhash = registrar.transaction.newBid( sol.Bytes32( bidHash.bytes ) )
+      val txnhash = {
+        try {
+          registrar.transaction.newBid( sol.Bytes32( bidHash.bytes ), Some( sol.UInt256(valueInWei + overpaymentInWei) ) )
+        } catch {
+          case t : Throwable => {
+            store.remove( bid )
+            throw t
+          }
+        }
+      }
 
       requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
 

@@ -22,6 +22,10 @@ import com.mchange.sc.v2.lang.borrow
 object DirectoryBidStore {
   val BufferSize = 8 * 1024
 
+  val BidFileRegex = """^\p{XDigit}{64}$""".r
+
+  def canBeBidFile( file : File ) = file.isFile && BidFileRegex.findFirstIn( file.getName() ).isDefined
+
   def bidString( bid : Bid ) = {
     import bid._
     s"${bidHash.hex}|${simpleName}|${bidderAddress}|${valueInWei}|${salt.hex}|${timestamp}" + System.lineSeparator
@@ -37,13 +41,17 @@ class DirectoryBidStore( dir : File ) extends BidStore {
   dir.mkdirs()
   require( dir.isDirectory && dir.canWrite, "DirectoryBidStore storage directory must exist or be creatable, and be writable. '${dir}' is not." )
 
+  val removeDir = new File( dir, "removed" )
+  removeDir.mkdirs()
+
   def store( bid : Bid ) : Unit = {
     val bidFile = new File( dir, bid.bidHash.hex )
     bidFile.replaceContents( bidString( bid ) + BidStore.State.Created + "\n", Codec.UTF8 )
   }
   def remove( bid : Bid ) : Unit = {
     val bidFile = new File( dir, bid.bidHash.hex )
-    bidFile.delete()
+    val destFile = new File( removeDir, bid.bidHash.hex )
+    bidFile.renameTo( destFile )
   }
   private def mark( bidHash : EthHash, state : BidStore.State ) : Unit = {
     val bidFile = new File( dir, bidHash.hex )
@@ -77,6 +85,6 @@ class DirectoryBidStore( dir : File ) extends BidStore {
   }
 
   def findByName( simpleName : String ) : immutable.Seq[ ( Bid, BidStore.State ) ] = {
-    dir.listFiles.map( readFile ).toVector
+    dir.listFiles.filter( canBeBidFile ).map( readFile ).toVector
   }
 }
