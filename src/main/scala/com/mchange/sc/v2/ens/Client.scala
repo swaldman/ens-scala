@@ -9,9 +9,9 @@ import scala.collection._
 import scala.concurrent.ExecutionContext
 
 import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash,EthPrivateKey,EthSigner,wallet}
-import com.mchange.sc.v1.consuela.ethereum.jsonrpc20.Invoker
+import com.mchange.sc.v1.consuela.ethereum.jsonrpc.Invoker
 
-import com.mchange.sc.v1.consuela.ethereum.ethabi.stub
+import com.mchange.sc.v1.consuela.ethereum.stub
 import stub.sol
 import stub.Sender
 
