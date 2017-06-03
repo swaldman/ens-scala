@@ -4,6 +4,7 @@ import java.net.IDN
 import java.nio.charset.StandardCharsets.US_ASCII
 
 import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash}
+import com.mchange.sc.v1.consuela.ethereum.jsonrpc.Invoker
 import com.mchange.sc.v1.consuela.ethereum.specification.Denominations
 
 /**
@@ -13,6 +14,16 @@ package object ens {
   class EnsException( message : String, cause : Throwable = null ) extends Exception( message, cause )
 
   final case object denominations extends Denominations
+
+  // bring these into the ens package for convenience
+  val  MarkupOrOverride = Invoker.MarkupOrOverride
+  type MarkupOrOverride = Invoker.MarkupOrOverride
+
+  val  Markup = Invoker.Markup
+  type Markup = Invoker.Markup
+
+  val  Override = Invoker.Override
+  type Override = Invoker.Override
 
   private val NullHash = EthHash.withBytes( Array.fill[Byte](32)(0.toByte) )
 

@@ -7,6 +7,7 @@ import java.time.temporal.ChronoUnit.DAYS
 
 import scala.collection._
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash,EthPrivateKey,EthSigner,wallet}
 import com.mchange.sc.v1.consuela.ethereum.jsonrpc.Invoker
@@ -16,7 +17,16 @@ import stub.sol
 import stub.Sender
 
 object Client {
-  def apply( ethJsonRpcUrl : String )( implicit econtext : ExecutionContext ) = new Client()( Invoker.Context( ethJsonRpcUrl ), econtext )
+
+  val DefaultGasLimitMarkup = Markup( 0.2 ) // a 20% margin over the estimated gas requirement
+  val DefaultPollPeriod     = 5.seconds
+
+  def apply(
+    ethJsonRpcUrl : String,
+    gasPriceTweak : MarkupOrOverride = MarkupOrOverride.None,
+    gasLimitTweak : MarkupOrOverride = DefaultGasLimitMarkup,
+    pollPeriod    : Duration         = DefaultPollPeriod
+  )( implicit econtext : ExecutionContext ) = new Client()( Invoker.Context( ethJsonRpcUrl, gasPriceTweak, gasLimitTweak, pollPeriod ), econtext )
 }
 class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld : String = "eth", reverseTld : String = "addr.reverse" )( implicit icontext : Invoker.Context, econtext : ExecutionContext ) extends stub.Utilities {
 
