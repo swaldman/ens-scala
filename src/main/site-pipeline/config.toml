@@ -1,0 +1,22 @@
+baseURL = "http://www.mchange.com/projects/ens-scala/"
+languageCode = "en-us"
+title = "ens-scala"
+theme = "hugo-theme-docdock"
+
+[params]
+   noSearch   = "true"
+   noHomeIcon = "true"
+
+[[menu.shortcuts]]
+name = "Home"
+identifier = "hugodoc-home"
+url = "{{ baseURL }}"
+weight = 5
+
+[[menu.shortcuts]]
+name = "API Documentation"
+identifier = "hugodoc-api"
+url = "{{ baseURL }}/latest/api/"
+weight = 50
+
+

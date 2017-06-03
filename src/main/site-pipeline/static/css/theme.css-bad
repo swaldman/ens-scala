@@ -1,0 +1,19 @@
+@font-face {
+    font-family: 'Roboto';
+    font-style: normal;
+    font-weight: 400;
+    src: url("../fonts/Roboto/Roboto-Regular-400.ttf") format("truetype");
+}
+@font-face {
+    font-family: 'Roboto';
+    font-style: italic;
+    font-weight: 400;
+    src: url("../fonts/Roboto/Roboto-Italic-400.ttf") format("truetype");
+}
+body {
+  font-family: "Roboto", "Work Sans", "Helvetica", "Tahoma", "Geneva", "Arial", sans-serif;
+}
+h2, h3, h4, h5, h6 {
+  font-family: "Roboto", "Work Sans", "Helvetica", "Tahoma", "Geneva", "Arial", sans-serif;
+}
+
