@@ -412,12 +412,12 @@ textarea:focus, input[type="email"]:focus, input[type="number"]:focus, input[typ
     background-color: #336;
     position: fixed;
     top: 0;
-    width: 300px;
+    width: 200px;
     bottom: 0;
     left: 0;
     font-weight: 300;
     font-size: 15px;
-    text-align: center
+    text-align: left
 }
 #sidebar a {
     color: #ccccff;
@@ -505,8 +505,8 @@ textarea:focus, input[type="email"]:focus, input[type="number"]:focus, input[typ
     display: block;
 }
 #sidebar ul.topics > li > a {
-    line-height: 2rem;
-    font-size: 1.1rem;
+    line-height: 1.1rem;
+    font-size: 1rem;
 }
 #sidebar ul.topics > li > a b {
     opacity: 0.5;
@@ -564,7 +564,7 @@ textarea:focus, input[type="email"]:focus, input[type="number"]:focus, input[typ
 }
 #body {
     position: relative;
-    margin-left: 300px;
+    margin-left: 200px;
     min-height: 100%;
 }
 #body img, #body .video-container {
@@ -1059,7 +1059,7 @@ td {
 }
 
 .highlightable {
-    padding: 1rem 0 1rem;
+    padding: 0rem 0 1rem;
     overflow: auto;
     position: relative;
     height: 100%;
@@ -1322,8 +1322,8 @@ pre .copy-to-clipboard:hover {
 }
 
 .cornerheader {
-   font-size: 36pt;
-   font-weght: bold;   
+   font-size: 24pt;
+   font-weight: bold;   
    color: #fff;
 }
 
@@ -1331,3 +1331,10 @@ pre .copy-to-clipboard:hover {
    text-decoration: underline;
 }
 
+div.more {
+    color: #ccc;
+    font-size: 12pt;
+    font-weight: bold;
+    font-style: italic;
+    font-decoration: underline;
+}

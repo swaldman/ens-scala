@@ -29,10 +29,10 @@ enablePlugins(HugoPlugin)
 //   tut -> preprocess -> hugo -> done
 
 val pipelineSourceDirectory = settingKey[File]("The directory from which the documentation pipeline begins.")
-val pipelineTargetDirectory = settingKey[File]("The directory in which the completed, processed documentation will be placed.")
+val pipelineTarget          = settingKey[File]("The directory in which the completed, processed documentation will be placed.")
 
 pipelineSourceDirectory := ( sourceDirectory in Compile ).value / "site-pipeline"
-pipelineTargetDirectory := target.value / "site" // same as where Scaladoc goes by default
+pipelineTarget := (target in makeSite).value // same as where Scaladoc goes
 
 tutSourceDirectory := pipelineSourceDirectory.value
 
@@ -44,19 +44,31 @@ sourceDirectory in Preprocess := tutTargetDirectory.value
 
 // make sure preprocess happens before hugo then let the hugo take file from preprocessor output
 
-baseURL in Hugo := uri("https://www.mchange.com/projects/ens-scala/")
+baseURL in Hugo := uri(s"http://www.mchange.com/projects/${name.value}/")
 mappings in Hugo := { ( ( mappings in Hugo ) dependsOn ( mappings in Preprocess ) ).value }
 sourceDirectory in Hugo := (target in Preprocess).value
-//targetDirectory in Hugo := pipelineTargetDirectory.value
+target in Hugo := target.value / "hugo"
+
+makeSite := {
+  val ensureHugoAndScaladoc = makeSite.value
+
+  val hugoPublicSite = (target in Hugo).value / "public"
+
+  IO.copyDirectory( hugoPublicSite, pipelineTarget.value, overwrite = true, preserveLastModified = false )
+
+  ensureHugoAndScaladoc // evaluate to the same directory as it would have, which is now the merged directory
+}
 
 val updateSite = taskKey[Unit]("Updates the project website on tickle")
 
 updateSite := {
   val dummy = makeSite.value // force a build of the site
 
-  val local = pipelineTargetDirectory.value
-  val remote = "swaldman@tickle.mchange.com:/home/web/public/www.mchange.com/projects/ens-scala"
-  s"scp -r ${local} ${remote}"!
+  val localDir = pipelineTarget.value
+
+  val local = localDir.listFiles.map( _.getPath ).mkString(" ")
+  val remote = s"tickle.mchange.com:/home/web/public/www.mchange.com/projects/${name.value}"
+  s"rsync -avz ${local} ${remote}"!
 }
 
 

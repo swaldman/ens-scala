@@ -5,18 +5,13 @@ theme = "hugo-theme-docdock"
 
 [params]
    noSearch   = "true"
-   noHomeIcon = "true"
+#   noHomeIcon = "true"
 
 [[menu.shortcuts]]
-name = "Home"
-identifier = "hugodoc-home"
-url = "{{ baseURL }}"
-weight = 5
-
-[[menu.shortcuts]]
+pre="<div class=\"more\">more &rarr;</div>"
 name = "API Documentation"
 identifier = "hugodoc-api"
-url = "{{ baseURL }}/latest/api/"
+url = "/latest/api"
 weight = 50
 
 
