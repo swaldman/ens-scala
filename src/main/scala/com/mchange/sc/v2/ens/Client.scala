@@ -106,113 +106,94 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
     deDotTld( name.toLowerCase ) ensuring ( _.indexOf('.') < 0, s"We expect a simple name (with no '.' characters) or else a <simple-name>.${tld}. Bad name: ${name}." )
   }
 
-  object Auctioneer {
+  private lazy val entropy = new java.security.SecureRandom
 
-    def forEthSigner( bidder : EthSigner )(implicit store : BidStore ) : Auctioneer = new Auctioneer( bidder )( store )
-
-    def forPrivateKey( privateKey : EthPrivateKey )(implicit store : BidStore ) : Auctioneer = forEthSigner( privateKey )( store )
-
-    def forPrivateKey( hex : String )(implicit store : BidStore ) : Auctioneer = forEthSigner( EthPrivateKey( hex ) )( store )
-
-    def forPrivateKey( s : BigInt )(implicit store : BidStore ) : Auctioneer = forEthSigner( EthPrivateKey( s ) )( store )
-
-    def forWalletV3( wv3 : wallet.V3, passcode : String )(implicit store : BidStore ) : Auctioneer = forEthSigner( wv3.decode( passcode ) )( store )
-
-    def forWalletV3( json : String, passcode : String )(implicit store : BidStore ) : Auctioneer = forWalletV3( wallet.V3( json ), passcode )( store )
-
+  private def randomHash : EthHash = {
+    val raw = Array.ofDim[Byte]( EthHash.HashLength )
+    entropy.nextBytes( raw )
+    EthHash.withBytes( raw )
   }
-  class Auctioneer( bidder : EthSigner )( implicit store : BidStore ) {
 
-    private implicit val sender = stub.Sender.Basic( bidder )
+  private def newSalt = randomHash.bytes
 
-    private lazy val entropy = new java.security.SecureRandom
+  private def sealedBid( normalized : String, bidderAddress : EthAddress, valueInWei : BigInt , salt : immutable.Seq[Byte] ) : EthHash = {
 
-    private def randomHash : EthHash = {
-      val raw = Array.ofDim[Byte]( EthHash.HashLength )
-      entropy.nextBytes( raw )
-      EthHash.withBytes( raw )
-    }
+    // this is a constant function that does not make use of a notional sender, Sender.Default is fine
+    val bytes32 = registrar.constant.shaBid( simplehash( normalized ), bidderAddress, sol.UInt256( valueInWei ), sol.Bytes32( salt ) )( Sender.Default ) 
 
-    lazy val bidderAddress = sender.address
+    EthHash.withBytes( bytes32.widen )
+  }
 
-    def startAuction( name : String, numDiversions : Int = 0 ) : Unit = {
-      val normalized = normalizeName( name )
+  private def sealedBid( bid : Bid ) : EthHash = sealedBid( bid.simpleName, bid.bidderAddress, bid.valueInWei, bid.salt )
 
-      val diversions : Set[EthHash] = immutable.HashSet( (0 until numDiversions).map( _ => randomHash ) : _* )
-      val real : EthHash            = EthHash.hash( toBytes( normalized ) )
+  def startAuction( from : EthSigner, name : String, numDiversions : Int = 0 ) : Unit = {
+    val normalized = normalizeName( name )
 
-      val allSeq = (diversions + real).toList.map( hash => sol.Bytes32( hash.bytes ) )
+    val diversions : Set[EthHash] = immutable.HashSet( (0 until numDiversions).map( _ => randomHash ) : _* )
+    val real : EthHash            = EthHash.hash( toBytes( normalized ) )
 
-      val txnhash = registrar.transaction.startAuctions( allSeq )
+    val allSeq = (diversions + real).toList.map( hash => sol.Bytes32( hash.bytes ) )
 
-      requireTransactionReceipt( txnhash ) // just keeping things synchronous... if this returns without error, the call has succeeded
-    }
+    val txnhash = registrar.transaction.startAuctions( allSeq )( Sender.Basic( from ) )
 
-    private def newSalt = randomHash.bytes
+    requireTransactionReceipt( txnhash ) // just keeping things synchronous... if this returns without error, the call has succeeded
+  }
 
-    private def sealedBid( normalized : String, address : EthAddress, valueInWei : BigInt , salt : immutable.Seq[Byte] ) : EthHash = {
-      val bytes32 = registrar.constant.shaBid( simplehash( normalized ), sender.address, sol.UInt256( valueInWei ), sol.Bytes32( salt ) )
-      EthHash.withBytes( bytes32.widen )
-    }
+  def newBid( from : EthSigner, name : String, valueInWei : BigInt, overpaymentInWei : BigInt = 0 )( implicit store : BidStore ) : Unit = {
+    val normalized = normalizeName( name )
+    val saltBytes = randomHash.bytes
+    val bidHash = sealedBid( normalized, from.address, valueInWei, saltBytes )
+    val bid = Bid( bidHash, normalized, from.address, valueInWei, saltBytes, System.currentTimeMillis )
+    store.store( bid ) // no matter what, persist what will be needed to reconstruct the bid hash!
 
-    private def sealedBid( bid : Bid ) : EthHash = sealedBid( bid.simpleName, bid.bidderAddress, bid.valueInWei, bid.salt )
-
-    def newBid( name : String, valueInWei : BigInt, overpaymentInWei : BigInt = 0 ) : Unit = {
-      val normalized = normalizeName( name )
-      val saltBytes = randomHash.bytes
-      val bidHash = sealedBid( normalized, sender.address, valueInWei, saltBytes )
-      val bid = Bid( bidHash, normalized, sender.address, valueInWei, saltBytes, System.currentTimeMillis )
-      store.store( bid ) // no matter what, persist what will be needed to reconstruct the bid hash!
-
-      val txnhash = {
-        try {
-          registrar.transaction.newBid( sol.Bytes32( bidHash.bytes ), Some( sol.UInt256(valueInWei + overpaymentInWei) ) )
-        } catch {
-          case t : Throwable => {
-            store.remove( bid )
-            throw t
-          }
+    val txnhash = {
+      try {
+        registrar.transaction.newBid( sol.Bytes32( bidHash.bytes ), Some( sol.UInt256(valueInWei + overpaymentInWei) ) )( Sender.Basic( from ) )
+      } catch {
+        case t : Throwable => {
+          store.remove( bid )
+          throw t
         }
       }
-
-      requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
-
-      store.markAccepted( bidHash )
     }
 
-    def revealBid( bidHash : EthHash ) : Unit = {
-      val (bid, state) = store.findByHash( bidHash ) // will throw if we can't find the bid!
+    requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
 
-      val txnhash = registrar.transaction.unsealBid( sol.Bytes32( simplehash( bid.simpleName ) ), sol.UInt256( bid.valueInWei ), sol.Bytes32( bid.salt ) )
+    store.markAccepted( bidHash )
+  }
 
-      requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
+  def revealBid( from : EthSigner, bidHash : EthHash )( implicit store : BidStore ) : Unit = {
+    val (bid, state) = store.findByHash( bidHash ) // will throw if we can't find the bid!
 
-      store.markRevealed( bidHash )
+    val txnhash = registrar.transaction.unsealBid( sol.Bytes32( simplehash( bid.simpleName ) ), sol.UInt256( bid.valueInWei ), sol.Bytes32( bid.salt ) )( Sender.Basic( from ) )
+
+    requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
+
+    store.markRevealed( bidHash )
+  }
+
+  def revealBid( from : EthSigner, name : String )( implicit store : BidStore ) : Unit = {
+    val normalized = normalizeName( name )
+    val bids = store.findByName( normalized )
+
+    bids.length match {
+      case 0 => throw new EnsException( s"Uh oh. Can't find a stored bid with name '${normalized}'!" )
+      case 1 => revealBid( from, bids.head._1.bidHash )( store )
+      case 2 => throw new EnsException( s"Multiple bids exist with that name. Please reveal by unique 'bidHash'. Bids: ${bids.map( _._1 )}" )
     }
+  }
 
-    def revealBid( name : String ) : Unit = {
-      val normalized = normalizeName( name )
-      val bids = store.findByName( normalized )
+  def cancelExpiredBid( canceller : EthSigner, lameBidder : EthAddress, bidHash : EthHash ) : Unit = {
+      val txnhash = registrar.transaction.cancelBid( lameBidder, sol.Bytes32( bidHash.bytes ) )( Sender.Basic( canceller ) )
 
-      bids.length match {
-        case 0 => throw new EnsException( s"Uh oh. Can't find a stored bid with name '${normalized}'!" )
-        case 1 => revealBid( bids.head._1.bidHash )
-        case 2 => throw new EnsException( s"Multiple bids exist with that name. Please reveal by unique 'bidHash'. Bids: ${bids.map( _._1 )}" )
-      }
-    }
+    requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
+  }
 
-    def cancelExpiredBid( lameBidder : EthAddress, bidHash : EthHash ) : Unit = {
-      val txnhash = registrar.transaction.cancelBid( lameBidder, sol.Bytes32( bidHash.bytes ) )
+  def finalizeAuction( from : EthSigner, name : String ) : Unit = {
+    val normalized = normalizeName( name )
 
-      requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
-    }
+    val txnhash = registrar.transaction.finalizeAuction( simplehash( normalized ) )( Sender.Basic( from ) )
 
-    def finalizeAuction( name : String ) : Unit = {
-      val normalized = normalizeName( name )
-
-      val txnhash = registrar.transaction.finalizeAuction( simplehash( normalized ) )
-
-      requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
-    }
+    requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
   }
 }
