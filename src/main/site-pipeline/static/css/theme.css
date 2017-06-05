@@ -1336,5 +1336,6 @@ div.more {
     font-size: 12pt;
     font-weight: bold;
     font-style: italic;
-    font-decoration: underline;
+    padding-top: 1rem;
+    margin-left: -0.25rem;
 }
