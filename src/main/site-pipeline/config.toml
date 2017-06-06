@@ -11,7 +11,7 @@ theme = "hugo-theme-docdock"
 pre="<div class=\"more\">more &rarr;</div>"
 name = "API Documentation"
 identifier = "hugodoc-api"
-url = "/latest/api"
+url = "/latest/api/com/mchange/sc/v2/ens/"
 weight = 50
 
 
