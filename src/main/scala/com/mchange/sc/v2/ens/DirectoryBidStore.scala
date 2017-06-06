@@ -9,7 +9,7 @@ import scala.io.{Codec,Source}
 import com.mchange.sc.v1.consuela._
 import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash}
 import com.mchange.sc.v2.io.RichFile
-import com.mchange.sc.v2.lang.borrow
+import com.mchange.sc.v2.lang.borrowExplicit
 
 
 /**
@@ -28,11 +28,11 @@ object DirectoryBidStore {
 
   def bidString( bid : Bid ) = {
     import bid._
-    s"${bidHash.hex}|${simpleName}|${bidderAddress.hex}|${valueInWei}|${salt.hex}|${timestamp}" + System.lineSeparator
+    s"${bidHash.hex}|${simpleName}|${bidderAddress.hex}|${valueInWei}|${salt.hex}" + System.lineSeparator
   }
   def parseBidString( line : String ) : Bid = {
     val split = line.split("""\s*\|\s*""")
-    Bid( EthHash.withBytes( split(0).decodeHex ), split(1), EthAddress( split(2) ), BigInt( split(3) ), split(4).decodeHexAsSeq, split(5).toLong )
+    Bid( EthHash.withBytes( split(0).decodeHex ), split(1), EthAddress( split(2) ), BigInt( split(3) ), split(4).decodeHexAsSeq )
   }
 }
 class DirectoryBidStore( dir : File ) extends BidStore {
@@ -66,7 +66,7 @@ class DirectoryBidStore( dir : File ) extends BidStore {
   def markRevealed( bidHash : EthHash )  : Unit = mark( bidHash, BidStore.State.Revealed )
 
   private def readFile( bidFile : File ) : ( Bid, BidStore.State ) = {
-    borrow( Source.fromFile( bidFile, BufferSize )( Codec.UTF8 ) )( _.close ) { source =>
+    borrowExplicit( Source.fromFile( bidFile, BufferSize )( Codec.UTF8 ) )( _.close ) { source =>
       val goodLines = source.getLines().toVector.map( _.trim ).filter( line => !line.startsWith("#") ).filter( _.length > 0 )
       val bid = parseBidString( goodLines.head )
       val state = BidStore.State.fromString( goodLines.last ).get // assert that the state can be found
