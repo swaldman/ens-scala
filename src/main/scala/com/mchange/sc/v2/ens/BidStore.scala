@@ -2,7 +2,7 @@ package com.mchange.sc.v2.ens
 
 import scala.collection._
 
-import com.mchange.sc.v1.consuela.ethereum.EthHash
+import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash}
 
 object BidStore {
   final object State {
@@ -26,5 +26,5 @@ trait BidStore {
   def markAccepted( bidHash : EthHash ) : Unit
   def markRevealed( bidHash : EthHash ) : Unit
   def findByHash( bidHash : EthHash ) : ( Bid, BidStore.State )
-  def findByName( simpleName : String ) : immutable.Seq[( Bid, BidStore.State )]
+  def findByNameBidderAddress( simpleName : String, bidderAddress : EthAddress ) : immutable.Seq[( Bid, BidStore.State )]
 }

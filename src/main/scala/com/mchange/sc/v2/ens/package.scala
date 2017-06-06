@@ -3,17 +3,24 @@ package com.mchange.sc.v2
 import java.net.IDN
 import java.nio.charset.StandardCharsets.US_ASCII
 
-import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash}
+import scala.collection._
+
+import com.mchange.sc.v1.consuela.ethereum.{EthAddress, EthHash}
 import com.mchange.sc.v1.consuela.ethereum.jsonrpc.Invoker
 import com.mchange.sc.v1.consuela.ethereum.specification.Denominations
 
 /**
   *  See https://github.com/ethereum/EIPs/issues/137
   */ 
-package object ens {
+package object ens extends Denominations {
   class EnsException( message : String, cause : Throwable = null ) extends Exception( message, cause )
-
-  final case object denominations extends Denominations
+  class RevealerIsNotBidderException( revealerAddress : EthAddress, bid : Bid ) extends EnsException( s"Revealer with address '0x${revealerAddress.hex}' cannot reveal bid '${bid}'." )
+  class UnexpectedBidStoreStateException( bid : Bid, state : BidStore.State ) extends EnsException(
+    "We expect bids to be in state 'Accepted' when they are revealed. " +
+      s"Bid '${bid}' is in state '${state}. " +
+      "To ignore this and force an attempt to reveal, set 'force = true' when revealing bids."
+  )
+  class SomeRevealsFailedException( tally : immutable.Seq[Either[FailedReveal,Bid]] ) extends EnsException( s"At least one attempt to reveal multiple bis has failed. tally: ${tally}" )
 
   // bring these into the ens package for convenience
   val  MarkupOrOverride = Invoker.MarkupOrOverride

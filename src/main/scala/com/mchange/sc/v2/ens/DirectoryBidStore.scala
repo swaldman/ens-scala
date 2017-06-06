@@ -84,7 +84,13 @@ class DirectoryBidStore( dir : File ) extends BidStore {
     readFile( bidFile )
   }
 
-  def findByName( simpleName : String ) : immutable.Seq[ ( Bid, BidStore.State ) ] = {
-    dir.listFiles.filter( canBeBidFile ).map( readFile ).toVector
+  def findByNameBidderAddress( simpleName : String, bidderAddress : EthAddress ) : immutable.Seq[ ( Bid, BidStore.State ) ] = {
+    val rawTuples = dir.listFiles.filter( canBeBidFile ).map( readFile )
+
+    val nameAddressTuples = rawTuples filter { case ( bid, state ) =>
+      bid.simpleName == simpleName && bid.bidderAddress == bidderAddress
+    }
+
+    nameAddressTuples.toVector
   }
 }
