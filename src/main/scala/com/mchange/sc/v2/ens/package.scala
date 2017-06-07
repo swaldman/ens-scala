@@ -21,6 +21,7 @@ package object ens extends Denominations {
       "To ignore this and force an attempt to reveal, set 'force = true' when revealing bids."
   )
   class SomeRevealsFailedException( tally : immutable.Seq[Either[FailedReveal,Bid]] ) extends EnsException( s"At least one attempt to reveal multiple bis has failed. tally: ${tally}" )
+  class NoResolverSetException( entity : String ) extends EnsException( s"No resolver set for entity '${entity}'." )
 
   // bring these into the ens package for convenience
   val  MarkupOrOverride = Invoker.MarkupOrOverride
@@ -59,5 +60,6 @@ package object ens extends Denominations {
   }
 
   val StandardNameServiceAddress = EthAddress( "0x314159265dd8dbb310642f98f50c066173c1259b" )
+  val StandardNameServicePublicResolver = EthAddress( "0x1da022710df5002339274aadee8d58218e9d6ab5" )
 }
 

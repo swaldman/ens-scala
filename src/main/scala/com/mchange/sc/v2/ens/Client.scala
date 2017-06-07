@@ -2,7 +2,7 @@ package com.mchange.sc.v2.ens
 
 import contract._
 
-import java.time.Instant
+import java.time.{Duration => JDuration, Instant}
 import java.time.temporal.ChronoUnit.DAYS
 
 import scala.collection._
@@ -38,23 +38,63 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
 
   private def _simplehash( str : String ) = EthHash.hash( toBytes( str ) )
 
-  private def simplehash( str : String ) = sol.Bytes32( _simplehash( str ).bytes )
+  private def stubsimpleshash( str : String ) = sol.Bytes32( _simplehash( str ).bytes )
 
   def owner( name : String ) : Option[EthAddress] = {
     val raw = nameService.constant.owner( stubnamehash( name ) )( Sender.Default )
     if ( raw == EthAddress.Zero ) None else Some( raw )
   }
 
-  def resolver( name : String ) : Option[EthAddress] = {
-    val raw = nameService.constant.resolver( stubnamehash( name ) )( Sender.Default )
+  def setOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : Unit = {
+    val txnhash = nameService.transaction.setOwner( stubnamehash( name ), ethaddress(address) )( Sender.Basic( ethsigner(signer) ) )
+    requireTransactionReceipt( txnhash )
+  }
+
+  def ttl( name : String ) : JDuration = {
+    val raw = nameService.constant.ttl( stubnamehash( name ) )( Sender.Default )
+    JDuration.ofSeconds( raw.widen.toValidLong )
+  }
+
+  def setTTL[S : EthSigner.Source]( signer : S, name : String, ttl : Long ) : Unit = {
+    val txnhash = nameService.transaction.setTTL( stubnamehash( name ), sol.UInt64( ttl ) )( Sender.Basic( ethsigner(signer) ) )
+    requireTransactionReceipt( txnhash )
+  }
+
+  private def _resolver( stubnodehash : sol.Bytes32 ) : Option[EthAddress] = {
+    val raw = nameService.constant.resolver( stubnodehash )( Sender.Default )
     if ( raw == EthAddress.Zero ) None else Some( raw )
   }
 
+  def resolver( name : String ) : Option[EthAddress] = _resolver( stubnamehash( name ) )
+
+  def setResolver[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, resolver : T ) : Unit = {
+    val txnhash = nameService.transaction.setResolver( stubnamehash( name ), ethaddress( resolver ) )( Sender.Basic( ethsigner(signer) ) )
+    requireTransactionReceipt( txnhash )
+  }
+
+  private def withResolver[T]( name : String )( op : ( sol.Bytes32, Resolver ) => Option[T] ) = {
+    val stubnodehash = stubnamehash( name )
+    _resolver( stubnodehash ) flatMap { resolverAddr =>
+      val resolver = new Resolver( resolverAddr )
+      op( stubnodehash, resolver )
+    }
+  }
+
   def address( name : String ) : Option[EthAddress] = {
-    resolver( name ) flatMap { resolverAddr =>
-      val r = new Resolver( resolverAddr )
-      val raw = r.constant.addr( stubnamehash( name ) )( Sender.Default ) // yes, this needlessly hashes twice
+    withResolver( name ){ ( stubnodehash, resolver ) =>
+      val raw = resolver.constant.addr( stubnodehash )( Sender.Default )
       if ( raw == EthAddress.Zero ) None else Some( raw )
+    }
+  }
+
+  def setAddress[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : Unit = {
+    val _address = ethaddress( address )
+    val mbTxnhash = withResolver( name ){ ( stubnodehash, resolver ) =>
+      Some( resolver.transaction.setAddr( stubnodehash, _address )( Sender.Basic( ethsigner(signer) ) ) )
+    }
+    mbTxnhash match {
+      case Some( txnhash ) => requireTransactionReceipt( txnhash ) // just keeping things synchronous... if this returns without error, the call has succeeded
+      case _ => throw new NoResolverSetException( name )
     }
   }
 
@@ -64,7 +104,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
 
   def nameStatus( name : String ) : NameStatus = {
     val normalized = normalizeName( name )
-    val code = registrar.constant.state( simplehash( normalized ) )( Sender.Default )
+    val code = registrar.constant.state( stubsimpleshash( normalized ) )( Sender.Default )
     NameStatus.byCode( code.widen )
   }
 
@@ -76,7 +116,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
     nameStatus( name ) match {
       case NameStatus.Auction | NameStatus.Reveal => {
         val normalized = normalizeName( name )
-        val entries = registrar.constant.entries( simplehash( normalized ) )( Sender.Default )
+        val entries = registrar.constant.entries( stubsimpleshash( normalized ) )( Sender.Default )
         Some( Instant.ofEpochSecond( entries._3.widen.toLong ) )
       }
       case _ => None
@@ -87,25 +127,25 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
 
   def whenAvailable( name : String ) : Instant = {
     val normalized = normalizeName( name )
-    val second = registrar.constant.getAllowedTime( simplehash( normalized ) )( Sender.Default )
+    val second = registrar.constant.getAllowedTime( stubsimpleshash( normalized ) )( Sender.Default )
     Instant.ofEpochSecond( second.widen.toValidLong )
   }
 
-  private def signer [T : EthSigner.Source] ( source : T ) : EthSigner  = implicitly[EthSigner.Source[T]].toEthSigner(source)
-  private def address[T : EthAddress.Source]( source : T ) : EthAddress = implicitly[EthAddress.Source[T]].toEthAddress(source)
+  private def ethsigner    [T : EthSigner.Source] ( source : T ) : EthSigner  = implicitly[EthSigner.Source[T]].toEthSigner(source)
+  private def ethaddress[T : EthAddress.Source]( source : T ) : EthAddress = implicitly[EthAddress.Source[T]].toEthAddress(source)
 
-  def transferName[T : EthSigner.Source]( from : T, to : EthAddress, name : String ) : Unit = {
+  def transferDeed[S : EthSigner.Source, T : EthAddress.Source]( from : S, to : T, name : String ) : Unit = {
     val normalized = normalizeName( name )
 
-    val txnhash = registrar.transaction.transfer( simplehash( name ), to )( Sender.Basic( signer(from) ) )
+    val txnhash = registrar.transaction.transfer( stubsimpleshash( normalized ), ethaddress(to) )( Sender.Basic( ethsigner(from) ) )
 
     requireTransactionReceipt( txnhash ) // just keeping things synchronous... if this returns without error, the call has succeeded
   }
 
-  def releaseName( owner : EthSigner, name : String ) : Unit = {
+  def releaseDeed[S : EthSigner.Source]( owner : S, name : String ) : Unit = {
     val normalized = normalizeName( name )
 
-    val txnhash = registrar.transaction.releaseDeed( simplehash( name ) )( Sender.Basic( signer(owner) ) )
+    val txnhash = registrar.transaction.releaseDeed( stubsimpleshash( normalized ) )( Sender.Basic( ethsigner(owner) ) )
 
     requireTransactionReceipt( txnhash ) // just keeping things synchronous... if this returns without error, the call has succeeded
   }
@@ -136,7 +176,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   private def sealedBid( normalized : String, bidderAddress : EthAddress, valueInWei : BigInt , salt : immutable.Seq[Byte] ) : EthHash = {
 
     // this is a constant function that does not make use of a notional sender, Sender.Default is fine
-    val bytes32 = registrar.constant.shaBid( simplehash( normalized ), bidderAddress, sol.UInt256( valueInWei ), sol.Bytes32( salt ) )( Sender.Default ) 
+    val bytes32 = registrar.constant.shaBid( stubsimpleshash( normalized ), bidderAddress, sol.UInt256( valueInWei ), sol.Bytes32( salt ) )( Sender.Default ) 
 
     EthHash.withBytes( bytes32.widen )
   }
@@ -151,13 +191,13 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
 
     val allSeq = (diversions + real).toList.map( hash => sol.Bytes32( hash.bytes ) )
 
-    val txnhash = registrar.transaction.startAuctions( allSeq )( Sender.Basic( signer(from) ) )
+    val txnhash = registrar.transaction.startAuctions( allSeq )( Sender.Basic( ethsigner(from) ) )
 
     requireTransactionReceipt( txnhash ) // just keeping things synchronous... if this returns without error, the call has succeeded
   }
 
   def createRawBid[T : EthAddress.Source]( fromAddress : T, name : String, valueInWei : BigInt ) : Bid = {
-    val _from = address( fromAddress )
+    val _from = ethaddress( fromAddress )
     val normalized = normalizeName( name )
     val saltBytes = randomHash.bytes
     val bidHash = sealedBid( normalized, _from, valueInWei, saltBytes )
@@ -165,7 +205,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   }
 
   def placeNewBid[T : EthSigner.Source]( bidder : T, name : String, valueInWei : BigInt, overpaymentInWei : BigInt = 0 )( implicit store : BidStore ) : Bid = {
-    val _bidder = signer( bidder )
+    val _bidder = ethsigner( bidder )
     val bid : Bid = createRawBid( _bidder.address, name, valueInWei )
 
     _placeRawBid( _bidder, bid, overpaymentInWei, Some( store ) )
@@ -174,7 +214,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   }
 
   private def _placeRawBid[T : EthSigner.Source]( bidder : T, bid : Bid, overpaymentInWei : BigInt, mbStore : Option[BidStore] ) : Unit = {
-    val _bidder = signer( bidder )
+    val _bidder = ethsigner( bidder )
 
     mbStore.foreach( _.store( bid ) ) // no matter what, persist what will be needed to reconstruct the bid hash!
 
@@ -195,7 +235,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   }
 
   def placeRawBid[T : EthSigner.Source]( bidder : T, bid : Bid, overpaymentInWei : Int = 0 ) : Unit = {
-    val _bidder = signer(bidder)
+    val _bidder = ethsigner(bidder)
     if ( _bidder.address != bid.bidderAddress ) {
       throw new EnsException( s"Bidder '0x${_bidder.address.hex}' does not match address in Bid ('0x${bid.bidderAddress.hex}'). Cannot place bid." )
     } else {
@@ -204,7 +244,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   }
 
   def revealRawBid[T : EthSigner.Source]( bidder : T, bid : Bid ) : Unit = {
-    val _bidder = signer(bidder)
+    val _bidder = ethsigner(bidder)
     if ( _bidder.address != bid.bidderAddress ) {
       throw new EnsException( s"Bidder '0x${_bidder.address.hex}' does not match address in Bid ('0x${bid.bidderAddress.hex}'). Cannot reveal bid." )
     } else {
@@ -217,7 +257,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   }
 
   def revealRawBid[T : EthSigner.Source]( nodeHash : EthHash, bidder : T, valueInWei : BigInt, salt : immutable.Seq[Byte] ) : Unit = {
-    val _bidder = signer( bidder )
+    val _bidder = ethsigner( bidder )
     val txnhash = registrar.transaction.unsealBid( sol.Bytes32( nodeHash.bytes ), sol.UInt256( valueInWei ), sol.Bytes32( salt ) )( Sender.Basic( _bidder ) )
     requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
   }
@@ -225,7 +265,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   def revealBid[T : EthSigner.Source]( from : T, bidHash : EthHash, force : Boolean )( implicit store : BidStore ) : Unit = {
     val (bid, state) = store.findByHash( bidHash ) // will throw if we can't find the bid!
 
-    val _from = signer( from )
+    val _from = ethsigner( from )
     val revealerAddress = _from.address
     if (_from.address != bid.bidderAddress ) {
       throw new RevealerIsNotBidderException( revealerAddress, bid )
@@ -240,7 +280,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   }
 
   def revealBid[T : EthSigner.Source]( from : T, name : String, force : Boolean = false )( implicit store : BidStore ) : Unit = {
-    val _from = signer( from )
+    val _from = ethsigner( from )
     val normalized = normalizeName( name )
     val bids = store.findByNameBidderAddress( normalized, _from.address )
 
@@ -252,7 +292,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   }
 
   def revealAllBids[T : EthSigner.Source]( from : T, name : String, force : Boolean = false )( implicit store : BidStore ) : Unit = {
-    val _from = signer( from )
+    val _from = ethsigner( from )
     val normalized = normalizeName( name )
     val bids = store.findByNameBidderAddress( normalized, _from.address )
 
@@ -289,7 +329,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   }
 
   def cancelExpiredBid[S : EthSigner.Source, T : EthAddress.Source] ( canceller : S, lameBidder : T, bidHash : EthHash ) : Unit = {
-    val txnhash = registrar.transaction.cancelBid( address( lameBidder ), sol.Bytes32( bidHash.bytes ) )( Sender.Basic( signer(canceller) ) )
+    val txnhash = registrar.transaction.cancelBid( ethaddress( lameBidder ), sol.Bytes32( bidHash.bytes ) )( Sender.Basic( ethsigner(canceller) ) )
 
     requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
   }
@@ -297,7 +337,7 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   def finalizeAuction[T : EthSigner.Source]( from : T, name : String ) : Unit = {
     val normalized = normalizeName( name )
 
-    val txnhash = registrar.transaction.finalizeAuction( simplehash( normalized ) )( Sender.Basic( signer(from) ) )
+    val txnhash = registrar.transaction.finalizeAuction( stubsimpleshash( normalized ) )( Sender.Basic( ethsigner(from) ) )
 
     requireTransactionReceipt( txnhash ) // keeping things synchronous... if this returns without error, the call has succeeded
   }
