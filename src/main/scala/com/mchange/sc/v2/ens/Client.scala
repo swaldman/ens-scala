@@ -28,7 +28,7 @@ object Client {
     gasPriceTweak : MarkupOrOverride = MarkupOrOverride.None,
     gasLimitTweak : MarkupOrOverride = DefaultGasLimitMarkup,
     pollPeriod    : Duration         = DefaultPollPeriod
-  )( implicit econtext : ExecutionContext ) = new Client()( Invoker.Context( ethJsonRpcUrl, gasPriceTweak, gasLimitTweak, pollPeriod ), econtext )
+  )( implicit econtext : ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global ) = new Client()( Invoker.Context( ethJsonRpcUrl, gasPriceTweak, gasLimitTweak, pollPeriod ), econtext )
 }
 class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld : String = "eth", reverseTld : String = "addr.reverse" )( implicit icontext : Invoker.Context, econtext : ExecutionContext ) extends stub.Utilities {
 
@@ -39,6 +39,14 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
   private def _simplehash( str : String ) = EthHash.hash( toBytes( str ) )
 
   private def stubsimpleshash( str : String ) = sol.Bytes32( _simplehash( str ).bytes )
+
+  private def ethsigner    [T : EthSigner.Source] ( source : T ) : EthSigner  = implicitly[EthSigner.Source[T]].toEthSigner(source)
+
+  private def ethaddress[T : EthAddress.Source]( source : T ) : EthAddress = implicitly[EthAddress.Source[T]].toEthAddress(source)
+
+  private lazy val registrar : Registrar = new Registrar( owner( tld ).get ) // we assert that it exists
+
+  private lazy val reverseRegistrar : ReverseRegistrar = new ReverseRegistrar( owner( reverseTld ).get ) // we assert that it exists
 
   def owner( name : String ) : Option[EthAddress] = {
     val raw = nameService.constant.owner( stubnamehash( name ) )( Sender.Default )
@@ -98,10 +106,6 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
     }
   }
 
-  private lazy val registrar : Registrar = new Registrar( owner( tld ).get ) // we assert that it exists
-
-  private lazy val reverseRegistrar : ReverseRegistrar = new ReverseRegistrar( owner( reverseTld ).get ) // we assert that it exists
-
   def nameStatus( name : String ) : NameStatus = {
     val normalized = normalizeName( name )
     val code = registrar.constant.state( stubsimpleshash( normalized ) )( Sender.Default )
@@ -130,9 +134,6 @@ class Client( nameServiceAddress : EthAddress = StandardNameServiceAddress, tld 
     val second = registrar.constant.getAllowedTime( stubsimpleshash( normalized ) )( Sender.Default )
     Instant.ofEpochSecond( second.widen.toValidLong )
   }
-
-  private def ethsigner    [T : EthSigner.Source] ( source : T ) : EthSigner  = implicitly[EthSigner.Source[T]].toEthSigner(source)
-  private def ethaddress[T : EthAddress.Source]( source : T ) : EthAddress = implicitly[EthAddress.Source[T]].toEthAddress(source)
 
   def transferDeed[S : EthSigner.Source, T : EthAddress.Source]( from : S, to : T, name : String ) : Unit = {
     val normalized = normalizeName( name )
