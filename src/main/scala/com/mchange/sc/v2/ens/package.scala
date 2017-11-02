@@ -8,6 +8,7 @@ import scala.collection._
 import com.mchange.sc.v1.consuela.ethereum.{EthAddress, EthHash}
 import com.mchange.sc.v1.consuela.ethereum.jsonrpc.Invoker
 import com.mchange.sc.v1.consuela.ethereum.specification.Denominations
+import com.mchange.sc.v1.consuela.ethereum.stub.TransactionInfo
 
 /**
   *  See https://github.com/ethereum/EIPs/issues/137
@@ -20,7 +21,7 @@ package object ens extends Denominations {
       s"Bid '${bid}' is in state '${state}. " +
       "To ignore this and force an attempt to reveal, set 'force = true' when revealing bids."
   )
-  class SomeRevealsFailedException( tally : immutable.Seq[Either[FailedReveal,Bid]] ) extends EnsException( s"At least one attempt to reveal multiple bis has failed. tally: ${tally}" )
+  class SomeRevealsFailedException( tally : immutable.Seq[Either[FailedReveal,(Bid, TransactionInfo)]] ) extends EnsException( s"At least one attempt to reveal multiple bis has failed. tally: ${tally}" )
   class NoResolverSetException( entity : String ) extends EnsException( s"No resolver set for entity '${entity}'." )
 
   // bring these into the ens package for convenience
