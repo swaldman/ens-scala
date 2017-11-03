@@ -27,7 +27,7 @@ object AsyncClient {
     ethJsonRpcUrl  : String,
     gasPriceTweak  : MarkupOrOverride = MarkupOrOverride.None,
     gasLimitTweak  : MarkupOrOverride = DefaultGasLimitMarkup,
-    pollPeriod     : Duration         = DefaultPollPeriod,
+    pollPeriod     : Duration         = DefaultPollPeriod
   )( implicit econtext : ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global ) = {
     new AsyncClient()( Invoker.Context( ethJsonRpcUrl, gasPriceTweak, gasLimitTweak, pollPeriod ), econtext )
   }
@@ -35,7 +35,7 @@ object AsyncClient {
 class AsyncClient(
   nameServiceAddress : EthAddress = StandardNameServiceAddress,
   tld                : String     = "eth",
-  reverseTld         : String     = "addr.reverse",
+  reverseTld         : String     = "addr.reverse"
 )( implicit icontext : Invoker.Context, econtext : ExecutionContext ) {
 
   private lazy val nameService = AsyncENS( nameServiceAddress )
