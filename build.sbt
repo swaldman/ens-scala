@@ -14,6 +14,12 @@ resolvers += ("snapshots" at "https://oss.sonatype.org/content/repositories/snap
 
 resolvers += ("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/")
 
+// This doesn't work... I'd like for the docs to also generate consuela docs, so
+// that links to consuela artifacts work
+//
+// autoAPIMappings := true
+// libraryDependencies += "com.mchange" %% "consuela" % "0.0.3-SNAPSHOT" changing() withSources() withJavadoc()
+
 libraryDependencies += "com.mchange" %% "consuela" % "0.0.3-SNAPSHOT" changing()
 libraryDependencies += "com.mchange" %% "mchange-commons-scala" % "0.4.3-SNAPSHOT" changing()
 
