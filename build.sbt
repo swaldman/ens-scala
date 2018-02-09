@@ -2,7 +2,7 @@ name := "ens-scala"
 
 organization := "com.mchange"
 
-version := "0.0.1-SNAPSHOT"
+version := "0.0.2-SNAPSHOT"
 
 scalaVersion := "2.12.4"
 
@@ -18,12 +18,8 @@ resolvers += ("Typesafe repository" at "http://repo.typesafe.com/typesafe/releas
 // that links to consuela artifacts work
 //
 // autoAPIMappings := true
-// libraryDependencies += "com.mchange" %% "consuela" % "0.0.3-SNAPSHOT" changing() withSources() withJavadoc()
 
-libraryDependencies += "com.mchange" %% "consuela" % "0.0.3-SNAPSHOT" changing()
-libraryDependencies += "com.mchange" %% "mchange-commons-scala" % "0.4.3-SNAPSHOT" changing()
-
-ethPackageScalaStubs := "com.mchange.sc.v2.ens.contract"
+ethcfgScalaStubsPackage := "com.mchange.sc.v2.ens.contract"
 
 // documentation stuff
 
@@ -70,6 +66,8 @@ makeSite := {
 val updateSite = taskKey[Unit]("Updates the project website on tickle")
 
 updateSite := {
+  import scala.sys.process._
+
   val dummy = makeSite.value // force a build of the site
 
   val localDir = pipelineTarget.value
