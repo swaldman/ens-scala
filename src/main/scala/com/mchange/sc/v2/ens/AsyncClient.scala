@@ -48,8 +48,8 @@ object AsyncClient {
 }
 class AsyncClient(
   nameServiceAddress : EthAddress = StandardNameServiceAddress,
-  tld                : String     = "eth",
-  reverseTld         : String     = "addr.reverse"
+  tld                : String     = StandardNameServiceTld,
+  reverseTld         : String     = StandardNameServiceReverseTld
 )( implicit icontext : Invoker.Context, econtext : ExecutionContext ) {
 
   private lazy val nameService = AsyncENS( nameServiceAddress )

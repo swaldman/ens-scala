@@ -48,8 +48,8 @@ object Client {
 }
 class Client(
   nameServiceAddress : EthAddress = StandardNameServiceAddress,
-  tld                : String     = "eth",
-  reverseTld         : String     = "addr.reverse",
+  tld                : String     = StandardNameServiceTld,
+  reverseTld         : String     = StandardNameServiceReverseTld,
   executionTimeout   : Duration   = Client.DefaultExecutionTimeout
 )( implicit icontext : Invoker.Context, econtext : ExecutionContext ) {
 
