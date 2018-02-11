@@ -16,20 +16,34 @@ import com.mchange.sc.v1.consuela.ethereum.jsonrpc.Invoker
 import com.mchange.sc.v1.consuela.ethereum.stub
 import stub.{sol, Sender, TransactionInfo}
 
+import com.mchange.sc.v2.net.URLSource
+
 object Client {
 
   val DefaultGasLimitMarkup   = Markup( 0.2 ) // a 20% margin over the estimated gas requirement
   val DefaultPollPeriod       = 5.seconds
   val DefaultExecutionTimeout = Duration.Inf
 
-  def apply(
-    ethJsonRpcUrl    : String,
+  def apply[ U : URLSource ](
+    ethJsonRpcUrl    : U,
     gasPriceTweak    : MarkupOrOverride = MarkupOrOverride.None,
     gasLimitTweak    : MarkupOrOverride = DefaultGasLimitMarkup,
     pollPeriod       : Duration         = DefaultPollPeriod,
     executionTimeout : Duration         = DefaultExecutionTimeout
   )( implicit econtext : ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global ) = {
-    new Client( executionTimeout = executionTimeout )( Invoker.Context( ethJsonRpcUrl, gasPriceTweak, gasLimitTweak, pollPeriod ), econtext )
+    new Client( executionTimeout = executionTimeout )( Invoker.Context.fromUrl( ethJsonRpcUrl, gasPriceTweak, gasLimitTweak, pollPeriod ), econtext )
+  }
+
+  final object LoadBalanced {
+    def apply[ U : URLSource ](
+      ethJsonRpcUrls   : immutable.Iterable[U],
+      gasPriceTweak    : MarkupOrOverride = MarkupOrOverride.None,
+      gasLimitTweak    : MarkupOrOverride = DefaultGasLimitMarkup,
+      pollPeriod       : Duration         = DefaultPollPeriod,
+      executionTimeout : Duration         = DefaultExecutionTimeout
+    )( implicit econtext : ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global ) = {
+      new Client( executionTimeout = executionTimeout )( Invoker.Context.fromUrls( ethJsonRpcUrls, gasPriceTweak, gasLimitTweak, pollPeriod ), econtext )
+    }
   }
 }
 class Client(
