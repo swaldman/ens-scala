@@ -195,16 +195,11 @@ class AsyncClient(
 
   // note that at the auction registrar, standard Ethereum Keccak hashes, rather than namehashes, are used
 
-  private val tldSuffix    = s".${tld}".toLowerCase
-
   private def requireSimpleName( simpleName : String ) = {
     require( simpleName.indexOf('.') < 0, s"The registrar auctions simple names in the '.${tld}' domain. These may not contain a '.'. (Bad Name: '${simpleName}'.)" )
   }
 
-  private def normalizeName( name : String ) = {
-    def deDotTld( str : String ) = if ( str.endsWith( tldSuffix ) ) str.take( str.length - tldSuffix.length ) else str
-    deDotTld( name.toLowerCase ) ensuring ( _.indexOf('.') < 0, s"We expect a simple name (with no '.' characters) or else a <simple-name>.${tld}. Bad name: ${name}." )
-  }
+  private def normalizeName( name : String ) = normalizeNameForTld( name, tld )
 
   private lazy val entropy = new java.security.SecureRandom
 

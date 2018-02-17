@@ -60,6 +60,12 @@ package object ens extends Denominations {
     }
   }
 
+  def normalizeNameForTld( name : String, tld : String ) : String = {
+    val tldSuffix = s".${tld}".toLowerCase
+    def deDotTld( str : String ) = if ( str.endsWith( tldSuffix ) ) str.take( str.length - tldSuffix.length ) else str
+    deDotTld( name.toLowerCase ) ensuring ( _.indexOf('.') < 0, s"We expect a simple name (with no '.' characters) or else a <simple-name>.${tld}. Bad name: ${name}." )
+  }
+
   val StandardNameServiceAddress = EthAddress( "0x314159265dd8dbb310642f98f50c066173c1259b" )
   val StandardNameServicePublicResolver = EthAddress( "0x1da022710df5002339274aadee8d58218e9d6ab5" )
 
