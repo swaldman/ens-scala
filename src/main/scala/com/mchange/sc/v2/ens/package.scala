@@ -51,12 +51,12 @@ package object ens extends Denominations {
   }
   def toBytes( nameComponent : String ) = IDN.toASCII( nameComponent, IDN.USE_STD3_ASCII_RULES ).getBytes( US_ASCII )
 
-  def hash( component : String ) : EthHash = EthHash.hash( toBytes( component ) )
+  def componentHash( component : String ) : EthHash = EthHash.hash( toBytes( component ) )
 
   def namehash( name : String ) : EthHash = {
     val components = tokenizeReverse( name )
     components.foldLeft( NullHash ) { ( last, next ) =>
-      EthHash.hash( last.bytes ++ hash( next ).bytes )
+      EthHash.hash( last.bytes ++ componentHash( next ).bytes )
     }
   }
 

@@ -47,10 +47,10 @@ object Client {
   }
 }
 class Client(
-  nameServiceAddress : EthAddress = StandardNameServiceAddress,
-  tld                : String     = StandardNameServiceTld,
-  reverseTld         : String     = StandardNameServiceReverseTld,
-  executionTimeout   : Duration   = Client.DefaultExecutionTimeout
+  val nameServiceAddress : EthAddress = StandardNameServiceAddress,
+  val tld                : String     = StandardNameServiceTld,
+  val reverseTld         : String     = StandardNameServiceReverseTld,
+  val executionTimeout   : Duration   = Client.DefaultExecutionTimeout
 )( implicit icontext : Invoker.Context, econtext : ExecutionContext ) {
 
   private val inner : AsyncClient = new AsyncClient( nameServiceAddress, tld, reverseTld )( icontext, econtext )

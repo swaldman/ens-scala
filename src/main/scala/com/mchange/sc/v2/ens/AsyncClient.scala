@@ -47,16 +47,16 @@ object AsyncClient {
   }
 }
 class AsyncClient(
-  nameServiceAddress : EthAddress = StandardNameServiceAddress,
-  tld                : String     = StandardNameServiceTld,
-  reverseTld         : String     = StandardNameServiceReverseTld
+  val nameServiceAddress : EthAddress = StandardNameServiceAddress,
+  val tld                : String     = StandardNameServiceTld,
+  val reverseTld         : String     = StandardNameServiceReverseTld
 )( implicit icontext : Invoker.Context, econtext : ExecutionContext ) {
 
   private lazy val nameService = AsyncENS( nameServiceAddress )
 
   private def stubnamehash( name : String ) : sol.Bytes32 = sol.Bytes32( namehash( name ).bytes )
 
-  private def _simplehash( str : String ) = EthHash.hash( toBytes( str ) )
+  private def _simplehash( str : String ) = componentHash( str )
 
   private def stubsimplehash( str : String ) = sol.Bytes32( _simplehash( str ).bytes )
 
