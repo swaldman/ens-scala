@@ -13,44 +13,81 @@ import scala.util.control.NonFatal
 
 import com.mchange.sc.v1.consuela._
 import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash,EthPrivateKey,EthSigner,wallet}
-import com.mchange.sc.v1.consuela.ethereum.jsonrpc.Invoker
+import com.mchange.sc.v1.consuela.ethereum.jsonrpc
 
 import com.mchange.sc.v1.consuela.ethereum.stub
 import stub.{sol, Sender, TransactionInfo}
 
+import com.mchange.sc.v2.concurrent.{Poller, Scheduler}
 import com.mchange.sc.v2.net.URLSource
 
 object AsyncClient {
 
-  val DefaultGasLimitMarkup = Markup( 0.2 ) // a 20% margin over the estimated gas requirement
-  val DefaultPollPeriod     = 5.seconds
-
   def apply[ U : URLSource ](
-    ethJsonRpcUrl  : U,
-    gasPriceTweak  : MarkupOrOverride = MarkupOrOverride.None,
-    gasLimitTweak  : MarkupOrOverride = DefaultGasLimitMarkup,
-    pollPeriod     : Duration         = DefaultPollPeriod
-  )( implicit econtext : ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global ) = {
-    new AsyncClient()( Invoker.Context.fromUrl( ethJsonRpcUrl, gasPriceTweak, gasLimitTweak, pollPeriod ), econtext )
+    jsonRpcUrl         : U,
+    gasPriceTweak      : stub.MarkupOrOverride  = stub.Context.Default.GasPriceTweak,
+    gasLimitTweak      : stub.MarkupOrOverride  = stub.Context.Default.GasLimitTweak,
+    pollPeriod         : Duration               = stub.Context.Default.PollPeriod,
+    pollTimeout        : Duration               = stub.Context.Default.PollTimeout,
+    gasApprover        : stub.GasApprover       = stub.Context.Default.GasApprover,
+    transactionLogger  : stub.TransactionLogger = stub.Context.Default.TransactionLogger,
+    eventConfirmations : Int                    = stub.Context.Default.EventConfirmations
+  )( implicit
+    cfactory  : jsonrpc.Client.Factory = stub.Context.Default.ClientFactory,
+    poller    : Poller                 = stub.Context.Default.Poller,
+    scheduler : Scheduler              = stub.Context.Default.Scheduler,
+    econtext  : ExecutionContext       = stub.Context.Default.ExecutionContext
+  ) = {
+    val scontext = stub.Context.fromUrl(
+      jsonRpcUrl         = jsonRpcUrl,
+      gasPriceTweak      = gasPriceTweak,
+      gasLimitTweak      = gasLimitTweak,
+      pollPeriod         = pollPeriod,
+      pollTimeout        = pollTimeout,        
+      gasApprover        = gasApprover,        
+      transactionLogger  = transactionLogger,
+      eventConfirmations = eventConfirmations
+    )( implicitly[URLSource[U]], cfactory, poller, scheduler, econtext )
+    new AsyncClient()( scontext )
   }
 
   final object LoadBalanced {
     def apply[ U : URLSource ](
-      ethJsonRpcUrls   : immutable.Iterable[U],
-      gasPriceTweak    : MarkupOrOverride = MarkupOrOverride.None,
-      gasLimitTweak    : MarkupOrOverride = DefaultGasLimitMarkup,
-      pollPeriod       : Duration         = DefaultPollPeriod
-    )( implicit econtext : ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global ) = {
-      new AsyncClient()( Invoker.Context.fromUrls( ethJsonRpcUrls, gasPriceTweak, gasLimitTweak, pollPeriod ), econtext )
+      jsonRpcUrls        : immutable.Iterable[U],
+      gasPriceTweak      : stub.MarkupOrOverride  = stub.Context.Default.GasPriceTweak,
+      gasLimitTweak      : stub.MarkupOrOverride  = stub.Context.Default.GasLimitTweak,
+      pollPeriod         : Duration               = stub.Context.Default.PollPeriod,
+      pollTimeout        : Duration               = stub.Context.Default.PollTimeout,
+      gasApprover        : stub.GasApprover       = stub.Context.Default.GasApprover,
+      transactionLogger  : stub.TransactionLogger = stub.Context.Default.TransactionLogger,
+      eventConfirmations : Int                    = stub.Context.Default.EventConfirmations
+    )( implicit
+      cfactory  : jsonrpc.Client.Factory  = stub.Context.Default.ClientFactory,
+      poller    : Poller                  = stub.Context.Default.Poller,
+      scheduler : Scheduler               = stub.Context.Default.Scheduler,
+      econtext  : ExecutionContext        = stub.Context.Default.ExecutionContext
+    ) = {
+      val scontext = stub.Context.fromUrls(
+        jsonRpcUrls        = jsonRpcUrls,
+        gasPriceTweak      = gasPriceTweak,
+        gasLimitTweak      = gasLimitTweak,
+        pollPeriod         = pollPeriod,
+        pollTimeout        = pollTimeout,
+        gasApprover        = gasApprover,
+        transactionLogger  = transactionLogger,
+        eventConfirmations = eventConfirmations
+      )( implicitly[URLSource[U]], cfactory, poller, scheduler, econtext )
+      new AsyncClient()( scontext )
     }
-
   }
 }
 class AsyncClient(
   val nameServiceAddress : EthAddress = StandardNameServiceAddress,
   val tld                : String     = StandardNameServiceTld,
   val reverseTld         : String     = StandardNameServiceReverseTld
-)( implicit icontext : Invoker.Context, econtext : ExecutionContext ) {
+)( implicit scontext : stub.Context ) {
+
+  implicit val econtext = scontext.icontext.econtext
 
   private lazy val nameService = AsyncENS( nameServiceAddress )
 
