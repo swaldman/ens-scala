@@ -24,14 +24,14 @@ import com.mchange.sc.v2.net.URLSource
 object AsyncClient {
 
   def apply[ U : URLSource ](
-    jsonRpcUrl         : U,
-    gasPriceTweak      : stub.MarkupOrOverride  = stub.Context.Default.GasPriceTweak,
-    gasLimitTweak      : stub.MarkupOrOverride  = stub.Context.Default.GasLimitTweak,
-    pollPeriod         : Duration               = stub.Context.Default.PollPeriod,
-    pollTimeout        : Duration               = stub.Context.Default.PollTimeout,
-    gasApprover        : stub.GasApprover       = stub.Context.Default.GasApprover,
-    transactionLogger  : stub.TransactionLogger = stub.Context.Default.TransactionLogger,
-    eventConfirmations : Int                    = stub.Context.Default.EventConfirmations
+    jsonRpcUrl          : U,
+    gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
+    gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
+    pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
+    pollTimeout         : Duration                 = stub.Context.Default.PollTimeout,
+    transactionApprover : stub.TransactionApprover = stub.Context.Default.TransactionApprover,
+    transactionLogger   : stub.TransactionLogger   = stub.Context.Default.TransactionLogger,
+    eventConfirmations  : Int                      = stub.Context.Default.EventConfirmations
   )( implicit
     cfactory  : jsonrpc.Client.Factory = stub.Context.Default.ClientFactory,
     poller    : Poller                 = stub.Context.Default.Poller,
@@ -39,28 +39,28 @@ object AsyncClient {
     econtext  : ExecutionContext       = stub.Context.Default.ExecutionContext
   ) = {
     val scontext = stub.Context.fromUrl(
-      jsonRpcUrl         = jsonRpcUrl,
-      gasPriceTweak      = gasPriceTweak,
-      gasLimitTweak      = gasLimitTweak,
-      pollPeriod         = pollPeriod,
-      pollTimeout        = pollTimeout,        
-      gasApprover        = gasApprover,        
-      transactionLogger  = transactionLogger,
-      eventConfirmations = eventConfirmations
+      jsonRpcUrl          = jsonRpcUrl,
+      gasPriceTweak       = gasPriceTweak,
+      gasLimitTweak       = gasLimitTweak,
+      pollPeriod          = pollPeriod,
+      pollTimeout         = pollTimeout,        
+      transactionApprover = transactionApprover,        
+      transactionLogger   = transactionLogger,
+      eventConfirmations  = eventConfirmations
     )( implicitly[URLSource[U]], cfactory, poller, scheduler, econtext )
     new AsyncClient()( scontext )
   }
 
   final object LoadBalanced {
     def apply[ U : URLSource ](
-      jsonRpcUrls        : immutable.Iterable[U],
-      gasPriceTweak      : stub.MarkupOrOverride  = stub.Context.Default.GasPriceTweak,
-      gasLimitTweak      : stub.MarkupOrOverride  = stub.Context.Default.GasLimitTweak,
-      pollPeriod         : Duration               = stub.Context.Default.PollPeriod,
-      pollTimeout        : Duration               = stub.Context.Default.PollTimeout,
-      gasApprover        : stub.GasApprover       = stub.Context.Default.GasApprover,
-      transactionLogger  : stub.TransactionLogger = stub.Context.Default.TransactionLogger,
-      eventConfirmations : Int                    = stub.Context.Default.EventConfirmations
+      jsonRpcUrls         : immutable.Iterable[U],
+      gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
+      gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
+      pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
+      pollTimeout         : Duration                 = stub.Context.Default.PollTimeout,
+      transactionApprover : stub.TransactionApprover = stub.Context.Default.TransactionApprover,
+      transactionLogger   : stub.TransactionLogger   = stub.Context.Default.TransactionLogger,
+      eventConfirmations  : Int                      = stub.Context.Default.EventConfirmations
     )( implicit
       cfactory  : jsonrpc.Client.Factory  = stub.Context.Default.ClientFactory,
       poller    : Poller                  = stub.Context.Default.Poller,
@@ -73,7 +73,7 @@ object AsyncClient {
         gasLimitTweak      = gasLimitTweak,
         pollPeriod         = pollPeriod,
         pollTimeout        = pollTimeout,
-        gasApprover        = gasApprover,
+        transactionApprover        = transactionApprover,
         transactionLogger  = transactionLogger,
         eventConfirmations = eventConfirmations
       )( implicitly[URLSource[U]], cfactory, poller, scheduler, econtext )
