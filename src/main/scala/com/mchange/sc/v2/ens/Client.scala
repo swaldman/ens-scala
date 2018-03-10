@@ -25,13 +25,17 @@ object Client {
 
   def apply[ U : URLSource ](
     jsonRpcUrl          : U,
+    nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
+    tld                 : String                   = StandardNameServiceTld,
+    reverseTld          : String                   = StandardNameServiceReverseTld,
     gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
     gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
     pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
     pollTimeout         : Duration                 = stub.Context.Default.PollTimeout,
     transactionApprover : stub.TransactionApprover = stub.Context.Default.TransactionApprover,
     transactionLogger   : stub.TransactionLogger   = stub.Context.Default.TransactionLogger,
-    eventConfirmations  : Int                      = stub.Context.Default.EventConfirmations
+    eventConfirmations  : Int                      = stub.Context.Default.EventConfirmations,
+    executionTimeout    : Duration                 = Client.DefaultExecutionTimeout
   )( implicit
     cfactory  : jsonrpc.Client.Factory = stub.Context.Default.ClientFactory,
     poller    : Poller                 = stub.Context.Default.Poller,
@@ -48,19 +52,23 @@ object Client {
       transactionLogger  = transactionLogger,
       eventConfirmations = eventConfirmations
     )( implicitly[URLSource[U]], cfactory, poller, scheduler, econtext )
-    new Client()( scontext )
+    new Client( nameServiceAddress, tld, reverseTld, executionTimeout )( scontext )
   }
 
   final object LoadBalanced {
     def apply[ U : URLSource ](
       jsonRpcUrls         : immutable.Iterable[U],
+      nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
+      tld                 : String                   = StandardNameServiceTld,
+      reverseTld          : String                   = StandardNameServiceReverseTld,
       gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
       gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
       pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
       pollTimeout         : Duration                 = stub.Context.Default.PollTimeout,
       transactionApprover : stub.TransactionApprover = stub.Context.Default.TransactionApprover,
       transactionLogger   : stub.TransactionLogger   = stub.Context.Default.TransactionLogger,
-      eventConfirmations  : Int                      = stub.Context.Default.EventConfirmations
+      eventConfirmations  : Int                      = stub.Context.Default.EventConfirmations,
+      executionTimeout    : Duration                 = Client.DefaultExecutionTimeout
     )( implicit
       cfactory  : jsonrpc.Client.Factory  = stub.Context.Default.ClientFactory,
       poller    : Poller                  = stub.Context.Default.Poller,
@@ -77,7 +85,7 @@ object Client {
         transactionLogger  = transactionLogger,
         eventConfirmations = eventConfirmations
       )( implicitly[URLSource[U]], cfactory, poller, scheduler, econtext )
-      new Client()( scontext )
+      new Client( nameServiceAddress, tld, reverseTld, executionTimeout )( scontext )
     }
   }
 }

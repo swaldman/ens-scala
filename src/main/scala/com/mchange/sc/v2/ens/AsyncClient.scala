@@ -25,6 +25,9 @@ object AsyncClient {
 
   def apply[ U : URLSource ](
     jsonRpcUrl          : U,
+    nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
+    tld                 : String                   = StandardNameServiceTld,
+    reverseTld          : String                   = StandardNameServiceReverseTld,
     gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
     gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
     pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
@@ -48,12 +51,15 @@ object AsyncClient {
       transactionLogger   = transactionLogger,
       eventConfirmations  = eventConfirmations
     )( implicitly[URLSource[U]], cfactory, poller, scheduler, econtext )
-    new AsyncClient()( scontext )
+    new AsyncClient( nameServiceAddress, tld, reverseTld )( scontext )
   }
 
   final object LoadBalanced {
     def apply[ U : URLSource ](
       jsonRpcUrls         : immutable.Iterable[U],
+      nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
+      tld                 : String                   = StandardNameServiceTld,
+      reverseTld          : String                   = StandardNameServiceReverseTld,
       gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
       gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
       pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
@@ -68,16 +74,16 @@ object AsyncClient {
       econtext  : ExecutionContext        = stub.Context.Default.ExecutionContext
     ) = {
       val scontext = stub.Context.fromUrls(
-        jsonRpcUrls        = jsonRpcUrls,
-        gasPriceTweak      = gasPriceTweak,
-        gasLimitTweak      = gasLimitTweak,
-        pollPeriod         = pollPeriod,
-        pollTimeout        = pollTimeout,
-        transactionApprover        = transactionApprover,
-        transactionLogger  = transactionLogger,
-        eventConfirmations = eventConfirmations
+        jsonRpcUrls         = jsonRpcUrls,
+        gasPriceTweak       = gasPriceTweak,
+        gasLimitTweak       = gasLimitTweak,
+        pollPeriod          = pollPeriod,
+        pollTimeout         = pollTimeout,
+        transactionApprover = transactionApprover,
+        transactionLogger   = transactionLogger,
+        eventConfirmations  = eventConfirmations
       )( implicitly[URLSource[U]], cfactory, poller, scheduler, econtext )
-      new AsyncClient()( scontext )
+      new AsyncClient( nameServiceAddress, tld, reverseTld )( scontext )
     }
   }
 }
