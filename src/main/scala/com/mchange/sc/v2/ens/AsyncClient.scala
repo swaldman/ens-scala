@@ -167,7 +167,7 @@ class AsyncClient(
     withResolver( name ){ ( stubnodehash, resolver ) =>
       val fAddr = resolver.constant.addr( stubnodehash )( Sender.Default )
       fAddr.map( addr => if ( addr == EthAddress.Zero ) None else Some( addr ) )
-    }
+    } recover { case e : NoResolverSetException => None }
   }
 
   def setAddress[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : Future[TransactionInfo] = {
