@@ -18,6 +18,7 @@ import com.mchange.sc.v1.consuela.ethereum.jsonrpc
 import com.mchange.sc.v1.consuela.ethereum.stub
 import stub.{sol, Sender, TransactionInfo}
 
+import com.mchange.sc.v2.jsonrpc.Exchanger
 import com.mchange.sc.v2.concurrent.{Poller, Scheduler}
 import com.mchange.sc.v2.net.URLSource
 
@@ -32,14 +33,15 @@ object AsyncClient {
     gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
     pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
     pollTimeout         : Duration                 = stub.Context.Default.PollTimeout,
+    httpTimeout         : Duration                 = stub.Context.Default.HttpTimeout,
     transactionApprover : stub.TransactionApprover = stub.Context.Default.TransactionApprover,
     transactionLogger   : stub.TransactionLogger   = stub.Context.Default.TransactionLogger,
     eventConfirmations  : Int                      = stub.Context.Default.EventConfirmations
   )( implicit
-    cfactory  : jsonrpc.Client.Factory = stub.Context.Default.ClientFactory,
-    poller    : Poller                 = stub.Context.Default.Poller,
-    scheduler : Scheduler              = stub.Context.Default.Scheduler,
-    econtext  : ExecutionContext       = stub.Context.Default.ExecutionContext
+    efactory  : Exchanger.Factory = stub.Context.Default.ExchangerFactory,
+    poller    : Poller            = stub.Context.Default.Poller,
+    scheduler : Scheduler         = stub.Context.Default.Scheduler,
+    econtext  : ExecutionContext  = stub.Context.Default.ExecutionContext
   ) = {
     val scontext = stub.Context.fromUrl(
       jsonRpcUrl          = jsonRpcUrl,
@@ -47,10 +49,11 @@ object AsyncClient {
       gasLimitTweak       = gasLimitTweak,
       pollPeriod          = pollPeriod,
       pollTimeout         = pollTimeout,        
+      httpTimeout         = httpTimeout,        
       transactionApprover = transactionApprover,        
       transactionLogger   = transactionLogger,
       eventConfirmations  = eventConfirmations
-    )( implicitly[URLSource[U]], cfactory, poller, scheduler, econtext )
+    )( implicitly[URLSource[U]], efactory, poller, scheduler, econtext )
     new AsyncClient( nameServiceAddress, tld, reverseTld )( scontext )
   }
 
@@ -64,14 +67,15 @@ object AsyncClient {
       gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
       pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
       pollTimeout         : Duration                 = stub.Context.Default.PollTimeout,
+      httpTimeout         : Duration                 = stub.Context.Default.HttpTimeout,
       transactionApprover : stub.TransactionApprover = stub.Context.Default.TransactionApprover,
       transactionLogger   : stub.TransactionLogger   = stub.Context.Default.TransactionLogger,
       eventConfirmations  : Int                      = stub.Context.Default.EventConfirmations
     )( implicit
-      cfactory  : jsonrpc.Client.Factory  = stub.Context.Default.ClientFactory,
-      poller    : Poller                  = stub.Context.Default.Poller,
-      scheduler : Scheduler               = stub.Context.Default.Scheduler,
-      econtext  : ExecutionContext        = stub.Context.Default.ExecutionContext
+      efactory  : Exchanger.Factory  = stub.Context.Default.ExchangerFactory,
+      poller    : Poller             = stub.Context.Default.Poller,
+      scheduler : Scheduler          = stub.Context.Default.Scheduler,
+      econtext  : ExecutionContext   = stub.Context.Default.ExecutionContext
     ) = {
       val scontext = stub.Context.fromUrls(
         jsonRpcUrls         = jsonRpcUrls,
@@ -79,10 +83,11 @@ object AsyncClient {
         gasLimitTweak       = gasLimitTweak,
         pollPeriod          = pollPeriod,
         pollTimeout         = pollTimeout,
+        httpTimeout         = httpTimeout,
         transactionApprover = transactionApprover,
         transactionLogger   = transactionLogger,
         eventConfirmations  = eventConfirmations
-      )( implicitly[URLSource[U]], cfactory, poller, scheduler, econtext )
+      )( implicitly[URLSource[U]], efactory, poller, scheduler, econtext )
       new AsyncClient( nameServiceAddress, tld, reverseTld )( scontext )
     }
   }
