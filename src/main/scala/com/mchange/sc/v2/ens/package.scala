@@ -21,7 +21,7 @@ package object ens extends Denominations {
       s"Bid '${bid}' is in state '${state}. " +
       "To ignore this and force an attempt to reveal, set 'force = true' when revealing bids."
   )
-  class SomeRevealsFailedException( tally : immutable.Seq[Either[FailedReveal,(Bid, TransactionInfo)]] ) extends EnsException( s"At least one attempt to reveal multiple bis has failed. tally: ${tally}" )
+  class SomeRevealsFailedException( tally : immutable.Seq[Either[FailedReveal,(Bid, TransactionInfo.Base)]] ) extends EnsException( s"At least one attempt to reveal multiple bis has failed. tally: ${tally}" )
   class NoResolverSetException( entity : String ) extends EnsException( s"No resolver set for entity '${entity}'." )
 
   // bring these into the ens package for convenience

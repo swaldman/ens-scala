@@ -105,26 +105,28 @@ class Client(
 
   private def await[T]( ft : Future[T] ) = Await.result( ft, executionTimeout )
 
+  private def awaitTransactionInfo( fti : Future[TransactionInfo.Async] ) = await( fti ).await
+
   def owner( name : String ) : Option[EthAddress] = await( inner.owner( name ) )
 
   def setOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : TransactionInfo = {
-    await( inner.setOwner( signer, name, address ) )
+    awaitTransactionInfo( inner.setOwner( signer, name, address ) )
   }
 
   def ttl( name : String ) : JDuration = await( inner.ttl( name ) )
 
-  def setTTL[S : EthSigner.Source]( signer : S, name : String, ttl : Long ) : TransactionInfo = await( inner.setTTL( signer, name, ttl ) )
+  def setTTL[S : EthSigner.Source]( signer : S, name : String, ttl : Long ) : TransactionInfo = awaitTransactionInfo( inner.setTTL( signer, name, ttl ) )
 
   def resolver( name : String ) : Option[EthAddress] = await( inner.resolver( name ) )
 
   def setResolver[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, resolver : T ) : TransactionInfo = {
-    await( inner.setResolver( signer, name, resolver ) )
+    awaitTransactionInfo( inner.setResolver( signer, name, resolver ) )
   }
 
   def address( name : String ) : Option[EthAddress] = await( inner.address( name ) )
 
   def setAddress[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : TransactionInfo = {
-    await( inner.setAddress( signer, name, address ) )
+    awaitTransactionInfo( inner.setAddress( signer, name, address ) )
   }
 
   def nameStatus( name : String ) : NameStatus = {
@@ -140,15 +142,15 @@ class Client(
   def whenAvailable( name : String ) : Instant = await( inner.whenAvailable( name ) )
 
   def transferDeed[S : EthSigner.Source, T : EthAddress.Source]( from : S, to : T, name : String ) : TransactionInfo = {
-    await( inner.transferDeed( from, to, name ) )
+    awaitTransactionInfo( inner.transferDeed( from, to, name ) )
   }
 
   def releaseDeed[S : EthSigner.Source]( owner : S, name : String ) : TransactionInfo = {
-    await( inner.releaseDeed( owner, name ) )
+    awaitTransactionInfo( inner.releaseDeed( owner, name ) )
   }
 
   def startAuction[T : EthSigner.Source]( from : T, name : String, numDiversions : Int = 0 ) : TransactionInfo = {
-    await( inner.startAuction( from, name, numDiversions ) )
+    awaitTransactionInfo( inner.startAuction( from, name, numDiversions ) )
   }
   
   def createRawBid[T : EthAddress.Source]( fromAddress : T, name : String, valueInWei : BigInt ) : Bid = {
@@ -156,39 +158,41 @@ class Client(
   }
 
   def placeNewBid[T : EthSigner.Source]( bidder : T, name : String, valueInWei : BigInt, overpaymentInWei : BigInt = 0 )( implicit store : BidStore ) : (Bid, TransactionInfo) = {
-    await( inner.placeNewBid( bidder, name, valueInWei, overpaymentInWei ) )
+    val tup = await( inner.placeNewBid( bidder, name, valueInWei, overpaymentInWei ) )
+    ( tup._1, tup._2.await )
   }
 
   def placeRawBid[T : EthSigner.Source]( bidder : T, bid : Bid, overpaymentInWei : Int = 0 ) : TransactionInfo = {
-    await( inner.placeRawBid( bidder, bid ) )
+    awaitTransactionInfo( inner.placeRawBid( bidder, bid ) )
   }
 
   def revealRawBid[T : EthSigner.Source]( bidder : T, bid : Bid ) : TransactionInfo = {
-    await( inner.revealRawBid( bidder, bid ) )
+    awaitTransactionInfo( inner.revealRawBid( bidder, bid ) )
   }
 
   def revealRawBid[T : EthSigner.Source]( nodeHash : EthHash, bidder : T, valueInWei : BigInt, salt : immutable.Seq[Byte] ) : TransactionInfo = {
-    await( inner.revealRawBid( nodeHash, bidder, valueInWei, salt ) )
+    awaitTransactionInfo( inner.revealRawBid( nodeHash, bidder, valueInWei, salt ) )
   }
 
   def revealBid[T : EthSigner.Source]( from : T, bidHash : EthHash, force : Boolean )( implicit store : BidStore ) : TransactionInfo = {
-    await( inner.revealBid( from, bidHash, force ) )
+    awaitTransactionInfo( inner.revealBid( from, bidHash, force ) )
   }
 
   def revealBid[T : EthSigner.Source]( from : T, name : String, force : Boolean = false )( implicit store : BidStore ) : TransactionInfo = {
-    await( inner.revealBid( from, name, force ) )
+    awaitTransactionInfo( inner.revealBid( from, name, force ) )
   }
 
   def revealAllBids[T : EthSigner.Source]( from : T, name : String, force : Boolean = false )( implicit store : BidStore ) : immutable.Seq[(Bid, TransactionInfo)] = {
-    await( inner.revealAllBids( from, name, force ) )
+    val asyncs = await( inner.revealAllBids( from, name, force ) )
+    asyncs.map { case (bid, tia) => (bid, tia.await) }
   }
 
   def cancelExpiredBid[S : EthSigner.Source, T : EthAddress.Source] ( canceller : S, lameBidder : T, bidHash : EthHash ) : TransactionInfo = {
-    await( inner.cancelExpiredBid( canceller, lameBidder, bidHash ) )
+    awaitTransactionInfo( inner.cancelExpiredBid( canceller, lameBidder, bidHash ) )
   }
 
   def finalizeAuction[T : EthSigner.Source]( from : T, name : String ) : TransactionInfo = {
-    await( inner.finalizeAuction( from, name ) )
+    awaitTransactionInfo( inner.finalizeAuction( from, name ) )
   }
 }
 

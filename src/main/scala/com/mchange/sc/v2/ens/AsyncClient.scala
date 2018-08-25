@@ -129,7 +129,7 @@ class AsyncClient(
     fAddr.map( addr => if ( addr == EthAddress.Zero ) None else Some( addr ) )
   }
 
-  def setOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : Future[TransactionInfo] = {
+  def setOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : Future[TransactionInfo.Async] = {
     nameService.transaction.setOwner( stubnamehash( name ), ethaddress(address) )( Sender.Basic( ethsigner(signer) ) )
   }
 
@@ -138,7 +138,7 @@ class AsyncClient(
     fSeconds.map( seconds => JDuration.ofSeconds( seconds.widen.toValidLong ) )
   }
 
-  def setTTL[S : EthSigner.Source]( signer : S, name : String, ttl : Long ) : Future[TransactionInfo] = {
+  def setTTL[S : EthSigner.Source]( signer : S, name : String, ttl : Long ) : Future[TransactionInfo.Async] = {
     nameService.transaction.setTTL( stubnamehash( name ), sol.UInt64( ttl ) )( Sender.Basic( ethsigner(signer) ) )
   }
 
@@ -149,7 +149,7 @@ class AsyncClient(
 
   def resolver( name : String ) : Future[Option[EthAddress]] = _resolver( stubnamehash( name ) )
 
-  def setResolver[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, resolver : T ) : Future[TransactionInfo] = {
+  def setResolver[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, resolver : T ) : Future[TransactionInfo.Async] = {
     nameService.transaction.setResolver( stubnamehash( name ), ethaddress( resolver ) )( Sender.Basic( ethsigner(signer) ) )
   }
   
@@ -175,7 +175,7 @@ class AsyncClient(
     } recover { case e : NoResolverSetException => None }
   }
 
-  def setAddress[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : Future[TransactionInfo] = {
+  def setAddress[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : Future[TransactionInfo.Async] = {
     val _address = ethaddress( address )
     withResolver( name ){ ( stubnodehash, resolver ) =>
       resolver.transaction.setAddr( stubnodehash, _address )( Sender.Basic( ethsigner(signer) ) )
@@ -225,7 +225,7 @@ class AsyncClient(
     fsecond.map( second => Instant.ofEpochSecond( second.widen.toValidLong ) )
   }
 
-  def transferDeed[S : EthSigner.Source, T : EthAddress.Source]( from : S, to : T, name : String ) : Future[TransactionInfo] = {
+  def transferDeed[S : EthSigner.Source, T : EthAddress.Source]( from : S, to : T, name : String ) : Future[TransactionInfo.Async] = {
     val normalized = normalizeName( name )
 
     fregistrar flatMap { registrar =>
@@ -233,7 +233,7 @@ class AsyncClient(
     }
   }
 
-  def releaseDeed[S : EthSigner.Source]( owner : S, name : String ) : Future[TransactionInfo] = {
+  def releaseDeed[S : EthSigner.Source]( owner : S, name : String ) : Future[TransactionInfo.Async] = {
     val normalized = normalizeName( name )
 
     fregistrar flatMap { registrar => 
@@ -271,7 +271,7 @@ class AsyncClient(
 
   private def sealedBid( bid : Bid ) : Future[EthHash] = sealedBid( bid.simpleName, bid.bidderAddress, bid.valueInWei, bid.salt )
 
-  def startAuction[T : EthSigner.Source]( from : T, name : String, numDiversions : Int = 0 ) : Future[TransactionInfo] = {
+  def startAuction[T : EthSigner.Source]( from : T, name : String, numDiversions : Int = 0 ) : Future[TransactionInfo.Async] = {
     val normalized = normalizeName( name )
 
     val diversions : Set[EthHash] = immutable.HashSet( (0 until numDiversions).map( _ => randomHash ) : _* )
@@ -292,7 +292,7 @@ class AsyncClient(
     fbidHash.map( bidHash => Bid( bidHash, normalized, _from, valueInWei, saltBytes ) )
   }
 
-  def placeNewBid[T : EthSigner.Source]( bidder : T, name : String, valueInWei : BigInt, overpaymentInWei : BigInt = 0 )( implicit store : BidStore ) : Future[(Bid, TransactionInfo)] = {
+  def placeNewBid[T : EthSigner.Source]( bidder : T, name : String, valueInWei : BigInt, overpaymentInWei : BigInt = 0 )( implicit store : BidStore ) : Future[(Bid, TransactionInfo.Async)] = {
     val _bidder = ethsigner( bidder )
 
     for {
@@ -303,7 +303,7 @@ class AsyncClient(
     }
   }
 
-  private def _placeRawBid[T : EthSigner.Source]( bidder : T, bid : Bid, overpaymentInWei : BigInt, mbStore : Option[BidStore] ) : Future[TransactionInfo] = {
+  private def _placeRawBid[T : EthSigner.Source]( bidder : T, bid : Bid, overpaymentInWei : BigInt, mbStore : Option[BidStore] ) : Future[TransactionInfo.Async] = {
     val _bidder = ethsigner( bidder )
 
     mbStore.foreach( _.store( bid ) ) // no matter what, persist what will be needed to reconstruct the bid hash!
@@ -320,7 +320,7 @@ class AsyncClient(
     ftxnInfo
   }
 
-  def placeRawBid[T : EthSigner.Source]( bidder : T, bid : Bid, overpaymentInWei : Int = 0 ) : Future[TransactionInfo] = {
+  def placeRawBid[T : EthSigner.Source]( bidder : T, bid : Bid, overpaymentInWei : Int = 0 ) : Future[TransactionInfo.Async] = {
     val _bidder = ethsigner(bidder)
     if ( _bidder.address != bid.bidderAddress ) {
       Future.failed( new EnsException( s"Bidder '0x${_bidder.address.hex}' does not match address in Bid ('0x${bid.bidderAddress.hex}'). Cannot place bid." ) )
@@ -329,7 +329,7 @@ class AsyncClient(
     }
   }
 
-  def revealRawBid[T : EthSigner.Source]( bidder : T, bid : Bid ) : Future[TransactionInfo] = {
+  def revealRawBid[T : EthSigner.Source]( bidder : T, bid : Bid ) : Future[TransactionInfo.Async] = {
     val _bidder = ethsigner(bidder)
     if ( _bidder.address != bid.bidderAddress ) {
       Future.failed( new EnsException( s"Bidder '0x${_bidder.address.hex}' does not match address in Bid ('0x${bid.bidderAddress.hex}'). Cannot reveal bid." ) )
@@ -338,11 +338,11 @@ class AsyncClient(
     }
   }
 
-  private def _revealRawBid[T : EthSigner.Source]( bidder : T, bid : Bid ) : Future[TransactionInfo] = {
+  private def _revealRawBid[T : EthSigner.Source]( bidder : T, bid : Bid ) : Future[TransactionInfo.Async] = {
     revealRawBid( _simplehash( bid.simpleName ), bidder, bid.valueInWei, bid.salt )
   }
 
-  def revealRawBid[T : EthSigner.Source]( nodeHash : EthHash, bidder : T, valueInWei : BigInt, salt : immutable.Seq[Byte] ) : Future[TransactionInfo] = {
+  def revealRawBid[T : EthSigner.Source]( nodeHash : EthHash, bidder : T, valueInWei : BigInt, salt : immutable.Seq[Byte] ) : Future[TransactionInfo.Async] = {
     val _bidder = ethsigner( bidder )
 
     fregistrar flatMap { registrar =>
@@ -350,7 +350,7 @@ class AsyncClient(
     }
   }
 
-  def revealBid[T : EthSigner.Source]( from : T, bidHash : EthHash, force : Boolean )( implicit store : BidStore ) : Future[TransactionInfo] = {
+  def revealBid[T : EthSigner.Source]( from : T, bidHash : EthHash, force : Boolean )( implicit store : BidStore ) : Future[TransactionInfo.Async] = {
     val (bid, state) = store.findByHash( bidHash ) // will throw if we can't find the bid!
 
     val _from = ethsigner( from )
@@ -370,7 +370,7 @@ class AsyncClient(
     }
   }
 
-  def revealBid[T : EthSigner.Source]( from : T, name : String, force : Boolean = false )( implicit store : BidStore ) : Future[TransactionInfo] = {
+  def revealBid[T : EthSigner.Source]( from : T, name : String, force : Boolean = false )( implicit store : BidStore ) : Future[TransactionInfo.Async] = {
     val _from = ethsigner( from )
     val normalized = normalizeName( name )
     val bids = store.findByNameBidderAddress( normalized, _from.address )
@@ -382,7 +382,7 @@ class AsyncClient(
     }
   }
 
-  def revealAllBids[T : EthSigner.Source]( from : T, name : String, force : Boolean = false )( implicit store : BidStore ) : Future[immutable.Seq[(Bid, TransactionInfo)]] = {
+  def revealAllBids[T : EthSigner.Source]( from : T, name : String, force : Boolean = false )( implicit store : BidStore ) : Future[immutable.Seq[(Bid, TransactionInfo.Async)]] = {
     val _from = ethsigner( from )
     val normalized = normalizeName( name )
     val bids = store.findByNameBidderAddress( normalized, _from.address )
@@ -418,13 +418,13 @@ class AsyncClient(
     }
   }
 
-  def cancelExpiredBid[S : EthSigner.Source, T : EthAddress.Source] ( canceller : S, lameBidder : T, bidHash : EthHash ) : Future[TransactionInfo] = {
+  def cancelExpiredBid[S : EthSigner.Source, T : EthAddress.Source] ( canceller : S, lameBidder : T, bidHash : EthHash ) : Future[TransactionInfo.Async] = {
     fregistrar flatMap { registrar =>
       registrar.transaction.cancelBid( ethaddress( lameBidder ), sol.Bytes32( bidHash.bytes ) )( Sender.Basic( ethsigner(canceller) ) )
     }
   }
 
-  def finalizeAuction[T : EthSigner.Source]( from : T, name : String ) : Future[TransactionInfo] = {
+  def finalizeAuction[T : EthSigner.Source]( from : T, name : String ) : Future[TransactionInfo.Async] = {
     val normalized = normalizeName( name )
 
     fregistrar flatMap { registrar =>
