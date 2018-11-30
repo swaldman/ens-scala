@@ -150,6 +150,10 @@ class AsyncClient(
     nameService.transaction.setOwner( stubnamehash( name ), ethaddress(address) )( Sender.Basic( ethsigner(signer) ) )
   }
 
+  def setSubnodeOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, parentName : String, subnodeLabel : String, address : T ) : Future[TransactionInfo.Async] = onlyOwner( signer, parentName ) {
+    nameService.transaction.setSubnodeOwner( stubnamehash( parentName ), stubsimplehash( subnodeLabel ), ethaddress(address) )( Sender.Basic( ethsigner(signer) ) )
+  }
+
   def ttl( name : String ) : Future[JDuration] = {
     val fSeconds = nameService.constant.ttl( stubnamehash( name ) )( Sender.Default )
     fSeconds.map( seconds => JDuration.ofSeconds( seconds.widen.toValidLong ) )

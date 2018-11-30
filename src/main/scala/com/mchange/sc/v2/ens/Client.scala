@@ -113,6 +113,10 @@ class Client(
     awaitTransactionInfo( inner.setOwner( signer, name, address ) )
   }
 
+  def setSubnodeOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, parentName : String, subnodeLabel : String, address : T ) : TransactionInfo = {
+    awaitTransactionInfo( inner.setSubnodeOwner( signer, parentName, subnodeLabel, address ) )
+  }
+
   def ttl( name : String ) : JDuration = await( inner.ttl( name ) )
 
   def setTTL[S : EthSigner.Source]( signer : S, name : String, ttl : Long ) : TransactionInfo = awaitTransactionInfo( inner.setTTL( signer, name, ttl ) )
