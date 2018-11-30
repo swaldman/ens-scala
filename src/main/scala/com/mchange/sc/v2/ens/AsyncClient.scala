@@ -130,7 +130,31 @@ class AsyncClient(
   }
 
   def setOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : Future[TransactionInfo.Async] = {
-    nameService.transaction.setOwner( stubnamehash( name ), ethaddress(address) )( Sender.Basic( ethsigner(signer) ) )
+    val nameTokens : Array[String] = tokenizeNameToArray( name )
+    val len = nameTokens.length
+
+    len match {
+      case 0 => Future.failed( new EnsException("Can't set owner of an empty name!") )
+      case 1 => {
+        assert( nameTokens(0) == name, s"Unexpected transformation by tokenizeNameToArray, original name '${name}', tokenized name '${nameTokens(0)}'." )
+        Future.failed( new EnsException( s"Can't set owner of a top-level domain. (Was asked to set owner on single-entry path '${nameTokens(0)}'.)") )
+      }
+      case 2 if nameTokens(1) != tld => {
+        Future.failed( new UnexpectedTldException( tld, nameTokens(1) ) )
+      }
+      case 2 => {
+        nameService.transaction.setOwner( stubnamehash( name ), ethaddress(address) )( Sender.Basic( ethsigner(signer) ) )
+      }
+      case n if nameTokens(n-1) != tld => {
+        Future.failed( new UnexpectedTldException( tld, nameTokens(1) ) )
+      }
+      case n => {
+        val newLabel = nameTokens.head
+        val parentTokens = nameTokens.tail
+        val parentName = parentTokens.mkString(".")
+        nameService.transaction.setSubnodeOwner( stubnamehash( parentName ), stubsimplehash( newLabel ), ethaddress(address) )( Sender.Basic( ethsigner(signer) ) )
+      }
+    }
   }
 
   def ttl( name : String ) : Future[JDuration] = {

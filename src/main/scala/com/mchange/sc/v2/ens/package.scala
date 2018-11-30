@@ -21,8 +21,10 @@ package object ens extends Denominations {
       s"Bid '${bid}' is in state '${state}. " +
       "To ignore this and force an attempt to reveal, set 'force = true' when revealing bids."
   )
-  class SomeRevealsFailedException( tally : immutable.Seq[Either[FailedReveal,(Bid, TransactionInfo.Base)]] ) extends EnsException( s"At least one attempt to reveal multiple bis has failed. tally: ${tally}" )
+  class SomeRevealsFailedException( tally : immutable.Seq[Either[FailedReveal,(Bid, TransactionInfo.Base)]] ) extends EnsException( s"At least one attempt to reveal multiple bids has failed. tally: ${tally}" ) 
   class NoResolverSetException( entity : String ) extends EnsException( s"No resolver set for entity '${entity}'." )
+  class UnexpectedTldException( expectedTld : String, foundTld : String ) extends EnsException( s"Expected ENS tld '${expectedTld}', found '${foundTld}'." )
+
 
   // bring these into the ens package for convenience
   val  MarkupOrOverride = Invoker.MarkupOrOverride
@@ -36,8 +38,10 @@ package object ens extends Denominations {
 
   private val NullHash = EthHash.withBytes( Array.fill[Byte](32)(0.toByte) )
 
+  def tokenizeNameToArray( name : String ) : Array[String] = if ( name.length == 0 ) Array.empty[String] else name.split("""\.""")
+
   private def tokenizeReverse( name : String ) : List[String] = {
-    val arr = if ( name.length == 0 ) Array.empty[String] else name.split("""\.""")
+    val arr = tokenizeNameToArray( name )
     val len = arr.length
 
     def build( nextIndex : Int, accum : List[String] ) : List[String] = {
