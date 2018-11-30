@@ -23,6 +23,8 @@ package object ens extends Denominations {
   )
   class SomeRevealsFailedException( tally : immutable.Seq[Either[FailedReveal,(Bid, TransactionInfo.Base)]] ) extends EnsException( s"At least one attempt to reveal multiple bis has failed. tally: ${tally}" )
   class NoResolverSetException( entity : String ) extends EnsException( s"No resolver set for entity '${entity}'." )
+  class OnlyOwnerException( name : String, caller : EthAddress, owner : EthAddress ) extends EnsException( s"Only the owner of name '${name}', 0x${owner.hex}, can call this function. This call by 0x'${caller} would fail'." )
+  class MustBeOwnedException( name : String ) extends EnsException( s"Only the owner of name '${name}' can call this function, but '${name}' has no owner." )
 
   // bring these into the ens package for convenience
   val  MarkupOrOverride = Invoker.MarkupOrOverride

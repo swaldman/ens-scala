@@ -129,7 +129,24 @@ class AsyncClient(
     fAddr.map( addr => if ( addr == EthAddress.Zero ) None else Some( addr ) )
   }
 
-  def setOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : Future[TransactionInfo.Async] = {
+  private def onlyOwner[S : EthSigner.Source]( signer : S, name : String )( op : => Future[TransactionInfo.Async] ) : Future[TransactionInfo.Async] = {
+    owner( name ).flatMap { 
+      case Some( owner ) => {
+        val es = ethsigner(signer)
+        if ( owner == es.address ) {
+          op
+        }
+        else {
+          Future.failed( new OnlyOwnerException( name, es.address, owner ) )
+        }
+      }
+      case None => {
+        Future.failed( new MustBeOwnedException( name ) )
+      }
+    }
+  }
+
+  def setOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T ) : Future[TransactionInfo.Async] = onlyOwner( signer, name ) {
     nameService.transaction.setOwner( stubnamehash( name ), ethaddress(address) )( Sender.Basic( ethsigner(signer) ) )
   }
 
@@ -138,7 +155,7 @@ class AsyncClient(
     fSeconds.map( seconds => JDuration.ofSeconds( seconds.widen.toValidLong ) )
   }
 
-  def setTTL[S : EthSigner.Source]( signer : S, name : String, ttl : Long ) : Future[TransactionInfo.Async] = {
+  def setTTL[S : EthSigner.Source]( signer : S, name : String, ttl : Long ) : Future[TransactionInfo.Async] = onlyOwner( signer, name ) {
     nameService.transaction.setTTL( stubnamehash( name ), sol.UInt64( ttl ) )( Sender.Basic( ethsigner(signer) ) )
   }
 
@@ -149,7 +166,7 @@ class AsyncClient(
 
   def resolver( name : String ) : Future[Option[EthAddress]] = _resolver( stubnamehash( name ) )
 
-  def setResolver[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, resolver : T ) : Future[TransactionInfo.Async] = {
+  def setResolver[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, resolver : T ) : Future[TransactionInfo.Async] = onlyOwner( signer, name ) {
     nameService.transaction.setResolver( stubnamehash( name ), ethaddress( resolver ) )( Sender.Basic( ethsigner(signer) ) )
   }
   
