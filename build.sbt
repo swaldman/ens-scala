@@ -12,7 +12,7 @@ resolvers += ("releases" at "https://oss.sonatype.org/service/local/staging/depl
 
 resolvers += ("snapshots" at "https://oss.sonatype.org/content/repositories/snapshots")
 
-resolvers += ("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/")
+// resolvers += ("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/")
 
 // This doesn't work... I'd like for the docs to also generate consuela docs, so
 // that links to consuela artifacts work
