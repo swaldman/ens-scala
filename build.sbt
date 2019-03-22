@@ -53,6 +53,14 @@ mappings in Hugo := { ( ( mappings in Hugo ) dependsOn ( mappings in Preprocess 
 sourceDirectory in Hugo := (target in Preprocess).value
 target in Hugo := target.value / "hugo"
 
+pomIncludeRepository := {
+  val snapshot = isSnapshot.value
+
+  (repo: MavenRepository) => {
+    repo.name == "releases" || ( snapshot && repo.name == "snapshots" )
+  }
+}
+
 makeSite := {
   val ensureHugoAndScaladoc = makeSite.value
 
