@@ -81,7 +81,7 @@ updateSite := {
   val localDir = pipelineTarget.value
 
   val local = localDir.listFiles.map( _.getPath ).mkString(" ")
-  val remote = s"tickle.mchange.com:/home/web/public/www.mchange.com/projects/${name.value}"
+  val remote = s"tickle.mchange.com:/home/web/public/www.mchange.com/projects/${name.value}-versions/${version.value}"
   s"rsync -avz ${local} ${remote}"!
 }
 
