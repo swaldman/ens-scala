@@ -175,7 +175,7 @@ class AsyncClient(
   private lazy val ftopLevelController : Future[AsyncController] = {
     for {
       topLevelResolver          <- ftopLevelResolver
-      topLevelControllerAddress <- topLevelResolver.constant.interfaceImplementer( stubnamehash( tld ), ControllerInterfaceId )( Sender.Default )
+      topLevelControllerAddress <- topLevelResolver.view.interfaceImplementer( stubnamehash( tld ), ControllerInterfaceId )( Sender.Default )
     }
     yield {
       new AsyncController( topLevelControllerAddress )
@@ -183,7 +183,7 @@ class AsyncClient(
   }
 
   def owner( name : String ) : Future[Option[EthAddress]] = {
-    val fAddr = nameService.constant.owner( stubnamehash( name ) )( Sender.Default )
+    val fAddr = nameService.view.owner( stubnamehash( name ) )( Sender.Default )
     fAddr.map( addr => if ( addr == EthAddress.Zero ) None else Some( addr ) )
   }
 
@@ -205,33 +205,33 @@ class AsyncClient(
   }
 
   def setOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = onlyOwner( signer, name ) {
-    nameService.transaction.setOwner( stubnamehash( name ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+    nameService.txn.setOwner( stubnamehash( name ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
   }
 
   def setSubnodeOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, parentName : String, subnodeLabel : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
     onlyOwner( signer, parentName ) {
-      nameService.transaction.setSubnodeOwner( stubnamehash( parentName ), stubsimplehash( subnodeLabel ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+      nameService.txn.setSubnodeOwner( stubnamehash( parentName ), stubsimplehash( subnodeLabel ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
     }
   }
 
   def ttl( name : String ) : Future[JDuration] = {
-    val fSeconds = nameService.constant.ttl( stubnamehash( name ) )( Sender.Default )
+    val fSeconds = nameService.view.ttl( stubnamehash( name ) )( Sender.Default )
     fSeconds.map( seconds => JDuration.ofSeconds( seconds.widen.toValidLong ) )
   }
 
   def setTTL[S : EthSigner.Source]( signer : S, name : String, ttl : Long, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = onlyOwner( signer, name ) {
-    nameService.transaction.setTTL( stubnamehash( name ), sol.UInt64( ttl ), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+    nameService.txn.setTTL( stubnamehash( name ), sol.UInt64( ttl ), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
   }
 
   private def _resolver( stubnodehash : sol.Bytes32 ) : Future[Option[EthAddress]] = {
-    val fAddr = nameService.constant.resolver( stubnodehash )( Sender.Default )
+    val fAddr = nameService.view.resolver( stubnodehash )( Sender.Default )
     fAddr.map( addr => if ( addr == EthAddress.Zero ) None else Some( addr ) )
   }
 
   def resolver( name : String ) : Future[Option[EthAddress]] = _resolver( stubnamehash( name ) )
 
   def setResolver[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, resolver : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = onlyOwner( signer, name ) {
-    nameService.transaction.setResolver( stubnamehash( name ), ethaddress( resolver ), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+    nameService.txn.setResolver( stubnamehash( name ), ethaddress( resolver ), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
   }
   
   private def withResolver[T]( name : String )( op : ( sol.Bytes32, AsyncResolver ) => Future[T] ) : Future[T] = {
@@ -251,7 +251,7 @@ class AsyncClient(
 
   def address( name : String ) : Future[Option[EthAddress]] = {
     withResolver( name ){ ( stubnodehash, resolver ) =>
-      val fAddr = resolver.constant.addr( stubnodehash )( Sender.Default )
+      val fAddr = resolver.view.addr( stubnodehash )( Sender.Default )
       fAddr.map( addr => if ( addr == EthAddress.Zero ) None else Some( addr ) )
     } recover { case e : NoResolverSetException => None }
   }
@@ -259,7 +259,7 @@ class AsyncClient(
   def setAddress[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
     val _address = ethaddress( address )
     withResolver( name ){ ( stubnodehash, resolver ) =>
-      resolver.transaction.setAddr( stubnodehash, _address, nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+      resolver.txn.setAddr( stubnodehash, _address, nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
     }
   }
 
@@ -267,7 +267,7 @@ class AsyncClient(
     requireSimpleName( name )
     for {
       topLevelController <- ftopLevelController
-      stubWei            <- topLevelController.constant.rentPrice( name, sol.UInt( durationInSeconds ) )( Sender.Default )
+      stubWei            <- topLevelController.view.rentPrice( name, sol.UInt( durationInSeconds ) )( Sender.Default )
     }
     yield {
       stubWei.widen
@@ -278,7 +278,7 @@ class AsyncClient(
     requireSimpleName( name )
     for {
       topLevelController <- ftopLevelController
-      stubBool           <- topLevelController.constant.valid( name )( Sender.Default )
+      stubBool           <- topLevelController.view.valid( name )( Sender.Default )
     }
     yield {
       stubBool
@@ -289,7 +289,7 @@ class AsyncClient(
     requireSimpleName( name )
     for {
       topLevelController <- ftopLevelController
-      stubBool           <- topLevelController.constant.available( name )( Sender.Default )
+      stubBool           <- topLevelController.view.available( name )( Sender.Default )
     }
     yield {
       stubBool
