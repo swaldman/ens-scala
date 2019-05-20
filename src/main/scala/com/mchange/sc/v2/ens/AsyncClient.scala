@@ -264,6 +264,7 @@ class AsyncClient(
   }
 
   def rentPriceInWei( name : String, durationInSeconds : BigInt ) : Future[BigInt] = {
+    requireSimpleName( name )
     for {
       topLevelController <- ftopLevelController
       stubWei            <- topLevelController.constant.rentPrice( name, sol.UInt( durationInSeconds ) )( Sender.Default )
@@ -272,5 +273,32 @@ class AsyncClient(
       stubWei.widen
     }
   }
+
+  def isValid( name : String ) : Future[Boolean] = {
+    requireSimpleName( name )
+    for {
+      topLevelController <- ftopLevelController
+      stubBool           <- topLevelController.constant.valid( name )( Sender.Default )
+    }
+    yield {
+      stubBool
+    }
+  }
+
+  def isAvailable( name : String ) : Future[Boolean] = {
+    requireSimpleName( name )
+    for {
+      topLevelController <- ftopLevelController
+      stubBool           <- topLevelController.constant.available( name )( Sender.Default )
+    }
+    yield {
+      stubBool
+    }
+  }
+
+  private def requireSimpleName( name : String ) = {
+    require( name.indexOf('.') < 0, s"A simple name (not a path, no internal periods) is required, but found '${name}'." )
+  }
+
 }
 
