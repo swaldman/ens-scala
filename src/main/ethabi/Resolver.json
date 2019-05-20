@@ -1,125 +1,395 @@
-[
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "interfaceID",
-        "type": "bytes4"
-      }
-    ],
-    "name": "supportsInterface",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "node",
-        "type": "bytes32"
-      }
-    ],
-    "name": "addr",
-    "outputs": [
-      {
-        "name": "ret",
-        "type": "address"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "node",
-        "type": "bytes32"
-      },
-      {
-        "name": "kind",
-        "type": "bytes32"
-      }
-    ],
-    "name": "has",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "node",
-        "type": "bytes32"
-      },
-      {
-        "name": "addr",
-        "type": "address"
-      }
-    ],
-    "name": "setAddr",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "node",
-        "type": "bytes32"
-      }
-    ],
-    "name": "content",
-    "outputs": [
-      {
-        "name": "ret",
-        "type": "bytes32"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "node",
-        "type": "bytes32"
-      },
-      {
-        "name": "hash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "setContent",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "name": "ensAddr",
-        "type": "address"
-      }
-    ],
-    "type": "constructor"
-  },
-  {
-    "payable": false,
-    "type": "fallback"
-  }
-]
+[ {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  }, {
+    "name" : "",
+    "type" : "bytes"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  }, {
+    "name" : "contentTypes",
+    "type" : "uint256"
+  } ],
+  "name" : "ABI",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "address"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  } ],
+  "name" : "addr",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bytes"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  } ],
+  "name" : "contenthash",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "address"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  }, {
+    "name" : "interfaceID",
+    "type" : "bytes4"
+  } ],
+  "name" : "interfaceImplementer",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bool"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "isOwner",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "string"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  } ],
+  "name" : "name",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "address"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "owner",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "x",
+    "type" : "bytes32"
+  }, {
+    "name" : "y",
+    "type" : "bytes32"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  } ],
+  "name" : "pubkey",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "renounceOwnership",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  }, {
+    "name" : "contentType",
+    "type" : "uint256"
+  }, {
+    "name" : "data",
+    "type" : "bytes"
+  } ],
+  "name" : "setABI",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  }, {
+    "name" : "addr",
+    "type" : "address"
+  } ],
+  "name" : "setAddr",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  }, {
+    "name" : "hash",
+    "type" : "bytes"
+  } ],
+  "name" : "setContenthash",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  }, {
+    "name" : "interfaceID",
+    "type" : "bytes4"
+  }, {
+    "name" : "implementer",
+    "type" : "address"
+  } ],
+  "name" : "setInterface",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  }, {
+    "name" : "name",
+    "type" : "string"
+  } ],
+  "name" : "setName",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  }, {
+    "name" : "x",
+    "type" : "bytes32"
+  }, {
+    "name" : "y",
+    "type" : "bytes32"
+  } ],
+  "name" : "setPubkey",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  }, {
+    "name" : "key",
+    "type" : "string"
+  }, {
+    "name" : "value",
+    "type" : "string"
+  } ],
+  "name" : "setText",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bool"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "interfaceID",
+    "type" : "bytes4"
+  } ],
+  "name" : "supportsInterface",
+  "stateMutability" : "pure",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "string"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32"
+  }, {
+    "name" : "key",
+    "type" : "string"
+  } ],
+  "name" : "text",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "newOwner",
+    "type" : "address"
+  } ],
+  "name" : "transferOwnership",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32",
+    "indexed" : true
+  }, {
+    "name" : "contentType",
+    "type" : "uint256",
+    "indexed" : true
+  } ],
+  "name" : "ABIChanged",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32",
+    "indexed" : true
+  }, {
+    "name" : "a",
+    "type" : "address",
+    "indexed" : false
+  } ],
+  "name" : "AddrChanged",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32",
+    "indexed" : true
+  }, {
+    "name" : "hash",
+    "type" : "bytes",
+    "indexed" : false
+  } ],
+  "name" : "ContenthashChanged",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32",
+    "indexed" : true
+  }, {
+    "name" : "interfaceID",
+    "type" : "bytes4",
+    "indexed" : true
+  }, {
+    "name" : "implementer",
+    "type" : "address",
+    "indexed" : false
+  } ],
+  "name" : "InterfaceChanged",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32",
+    "indexed" : true
+  }, {
+    "name" : "name",
+    "type" : "string",
+    "indexed" : false
+  } ],
+  "name" : "NameChanged",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "previousOwner",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "newOwner",
+    "type" : "address",
+    "indexed" : true
+  } ],
+  "name" : "OwnershipTransferred",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32",
+    "indexed" : true
+  }, {
+    "name" : "x",
+    "type" : "bytes32",
+    "indexed" : false
+  }, {
+    "name" : "y",
+    "type" : "bytes32",
+    "indexed" : false
+  } ],
+  "name" : "PubkeyChanged",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "node",
+    "type" : "bytes32",
+    "indexed" : true
+  }, {
+    "name" : "indexedKey",
+    "type" : "string",
+    "indexed" : false
+  }, {
+    "name" : "key",
+    "type" : "string",
+    "indexed" : false
+  } ],
+  "name" : "TextChanged",
+  "anonymous" : false,
+  "type" : "event"
+} ]

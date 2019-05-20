@@ -1,0 +1,332 @@
+[ {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "MIN_REGISTRATION_DURATION",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bool"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "name",
+    "type" : "string"
+  } ],
+  "name" : "available",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "commitment",
+    "type" : "bytes32"
+  } ],
+  "name" : "commit",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "",
+    "type" : "bytes32"
+  } ],
+  "name" : "commitments",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bool"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "isOwner",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bytes32"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "name",
+    "type" : "string"
+  }, {
+    "name" : "owner",
+    "type" : "address"
+  }, {
+    "name" : "secret",
+    "type" : "bytes32"
+  } ],
+  "name" : "makeCommitment",
+  "stateMutability" : "pure",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "maxCommitmentAge",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "minCommitmentAge",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "address"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "owner",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : true,
+  "inputs" : [ {
+    "name" : "name",
+    "type" : "string"
+  }, {
+    "name" : "owner",
+    "type" : "address"
+  }, {
+    "name" : "duration",
+    "type" : "uint256"
+  }, {
+    "name" : "secret",
+    "type" : "bytes32"
+  } ],
+  "name" : "register",
+  "stateMutability" : "payable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : true,
+  "inputs" : [ {
+    "name" : "name",
+    "type" : "string"
+  }, {
+    "name" : "duration",
+    "type" : "uint256"
+  } ],
+  "name" : "renew",
+  "stateMutability" : "payable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "renounceOwnership",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "name",
+    "type" : "string"
+  }, {
+    "name" : "duration",
+    "type" : "uint256"
+  } ],
+  "name" : "rentPrice",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "_minCommitmentAge",
+    "type" : "uint256"
+  }, {
+    "name" : "_maxCommitmentAge",
+    "type" : "uint256"
+  } ],
+  "name" : "setCommitmentAges",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "_prices",
+    "type" : "address"
+  } ],
+  "name" : "setPriceOracle",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bool"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "interfaceID",
+    "type" : "bytes4"
+  } ],
+  "name" : "supportsInterface",
+  "stateMutability" : "pure",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "newOwner",
+    "type" : "address"
+  } ],
+  "name" : "transferOwnership",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bool"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "name",
+    "type" : "string"
+  } ],
+  "name" : "valid",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "withdraw",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "inputs" : [ {
+    "name" : "name",
+    "type" : "string",
+    "indexed" : false
+  }, {
+    "name" : "label",
+    "type" : "bytes32",
+    "indexed" : true
+  }, {
+    "name" : "owner",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "cost",
+    "type" : "uint256",
+    "indexed" : false
+  }, {
+    "name" : "expires",
+    "type" : "uint256",
+    "indexed" : false
+  } ],
+  "name" : "NameRegistered",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "name",
+    "type" : "string",
+    "indexed" : false
+  }, {
+    "name" : "label",
+    "type" : "bytes32",
+    "indexed" : true
+  }, {
+    "name" : "cost",
+    "type" : "uint256",
+    "indexed" : false
+  }, {
+    "name" : "expires",
+    "type" : "uint256",
+    "indexed" : false
+  } ],
+  "name" : "NameRenewed",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "oracle",
+    "type" : "address",
+    "indexed" : true
+  } ],
+  "name" : "NewPriceOracle",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "previousOwner",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "newOwner",
+    "type" : "address",
+    "indexed" : true
+  } ],
+  "name" : "OwnershipTransferred",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "_base",
+    "type" : "address"
+  }, {
+    "name" : "_prices",
+    "type" : "address"
+  }, {
+    "name" : "_minCommitmentAge",
+    "type" : "uint256"
+  }, {
+    "name" : "_maxCommitmentAge",
+    "type" : "uint256"
+  } ],
+  "stateMutability" : "nonpayable",
+  "type" : "constructor"
+} ]
+

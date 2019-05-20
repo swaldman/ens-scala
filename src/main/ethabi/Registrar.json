@@ -1,551 +1,553 @@
-[
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "_hash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "releaseDeed",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "_hash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "getAllowedTime",
-    "outputs": [
-      {
-        "name": "timestamp",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "unhashedName",
-        "type": "string"
-      }
-    ],
-    "name": "invalidateName",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "hash",
-        "type": "bytes32"
-      },
-      {
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "name": "value",
-        "type": "uint256"
-      },
-      {
-        "name": "salt",
-        "type": "bytes32"
-      }
-    ],
-    "name": "shaBid",
-    "outputs": [
-      {
-        "name": "sealedBid",
-        "type": "bytes32"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "bidder",
-        "type": "address"
-      },
-      {
-        "name": "seal",
-        "type": "bytes32"
-      }
-    ],
-    "name": "cancelBid",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "_hash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "entries",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint8"
-      },
-      {
-        "name": "",
-        "type": "address"
-      },
-      {
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "ens",
-    "outputs": [
-      {
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "_hash",
-        "type": "bytes32"
-      },
-      {
-        "name": "_value",
-        "type": "uint256"
-      },
-      {
-        "name": "_salt",
-        "type": "bytes32"
-      }
-    ],
-    "name": "unsealBid",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "_hash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "transferRegistrars",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "",
-        "type": "address"
-      },
-      {
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "name": "sealedBids",
-    "outputs": [
-      {
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "_hash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "state",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "_hash",
-        "type": "bytes32"
-      },
-      {
-        "name": "newOwner",
-        "type": "address"
-      }
-    ],
-    "name": "transfer",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [
-      {
-        "name": "_hash",
-        "type": "bytes32"
-      },
-      {
-        "name": "_timestamp",
-        "type": "uint256"
-      }
-    ],
-    "name": "isAllowed",
-    "outputs": [
-      {
-        "name": "allowed",
-        "type": "bool"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "_hash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "finalizeAuction",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "registryStarted",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "launchLength",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint32"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "sealedBid",
-        "type": "bytes32"
-      }
-    ],
-    "name": "newBid",
-    "outputs": [],
-    "payable": true,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "labels",
-        "type": "bytes32[]"
-      }
-    ],
-    "name": "eraseNode",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "_hashes",
-        "type": "bytes32[]"
-      }
-    ],
-    "name": "startAuctions",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "hash",
-        "type": "bytes32"
-      },
-      {
-        "name": "deed",
-        "type": "address"
-      },
-      {
-        "name": "registrationDate",
-        "type": "uint256"
-      }
-    ],
-    "name": "acceptRegistrarTransfer",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "_hash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "startAuction",
-    "outputs": [],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [],
-    "name": "rootNode",
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "payable": false,
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "hashes",
-        "type": "bytes32[]"
-      },
-      {
-        "name": "sealedBid",
-        "type": "bytes32"
-      }
-    ],
-    "name": "startAuctionsAndBid",
-    "outputs": [],
-    "payable": true,
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "name": "_ens",
-        "type": "address"
-      },
-      {
-        "name": "_rootNode",
-        "type": "bytes32"
-      },
-      {
-        "name": "_startDate",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "type": "constructor"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "name": "hash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "name": "registrationDate",
-        "type": "uint256"
-      }
-    ],
-    "name": "AuctionStarted",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "name": "hash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "name": "bidder",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "name": "deposit",
-        "type": "uint256"
-      }
-    ],
-    "name": "NewBid",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "name": "hash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "name": "value",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "name": "status",
-        "type": "uint8"
-      }
-    ],
-    "name": "BidRevealed",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "name": "hash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "name": "value",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "name": "registrationDate",
-        "type": "uint256"
-      }
-    ],
-    "name": "HashRegistered",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "name": "hash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "name": "value",
-        "type": "uint256"
-      }
-    ],
-    "name": "HashReleased",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "name": "hash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
-        "name": "name",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "name": "value",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "name": "registrationDate",
-        "type": "uint256"
-      }
-    ],
-    "name": "HashInvalidated",
-    "type": "event"
-  }
-]
+[ {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "GRACE_PERIOD",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "MIGRATION_LOCK_PERIOD",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "label",
+    "type" : "bytes32"
+  }, {
+    "name" : "deed",
+    "type" : "address"
+  }, {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "name" : "acceptRegistrarTransfer",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "controller",
+    "type" : "address"
+  } ],
+  "name" : "addController",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "to",
+    "type" : "address"
+  }, {
+    "name" : "tokenId",
+    "type" : "uint256"
+  } ],
+  "name" : "approve",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bool"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "id",
+    "type" : "uint256"
+  } ],
+  "name" : "available",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "owner",
+    "type" : "address"
+  } ],
+  "name" : "balanceOf",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bytes32"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "baseNode",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bool"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "",
+    "type" : "address"
+  } ],
+  "name" : "controllers",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "address"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "ens",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "address"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "tokenId",
+    "type" : "uint256"
+  } ],
+  "name" : "getApproved",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bool"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "owner",
+    "type" : "address"
+  }, {
+    "name" : "operator",
+    "type" : "address"
+  } ],
+  "name" : "isApprovedForAll",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bool"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "isOwner",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "id",
+    "type" : "uint256"
+  } ],
+  "name" : "nameExpires",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "address"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "owner",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "address"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "tokenId",
+    "type" : "uint256"
+  } ],
+  "name" : "ownerOf",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "address"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "previousRegistrar",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "id",
+    "type" : "uint256"
+  }, {
+    "name" : "owner",
+    "type" : "address"
+  } ],
+  "name" : "reclaim",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "id",
+    "type" : "uint256"
+  }, {
+    "name" : "owner",
+    "type" : "address"
+  }, {
+    "name" : "duration",
+    "type" : "uint256"
+  } ],
+  "name" : "register",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "controller",
+    "type" : "address"
+  } ],
+  "name" : "removeController",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "id",
+    "type" : "uint256"
+  }, {
+    "name" : "duration",
+    "type" : "uint256"
+  } ],
+  "name" : "renew",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "renounceOwnership",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "from",
+    "type" : "address"
+  }, {
+    "name" : "to",
+    "type" : "address"
+  }, {
+    "name" : "tokenId",
+    "type" : "uint256"
+  } ],
+  "name" : "safeTransferFrom",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "from",
+    "type" : "address"
+  }, {
+    "name" : "to",
+    "type" : "address"
+  }, {
+    "name" : "tokenId",
+    "type" : "uint256"
+  }, {
+    "name" : "_data",
+    "type" : "bytes"
+  } ],
+  "name" : "safeTransferFrom",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "to",
+    "type" : "address"
+  }, {
+    "name" : "approved",
+    "type" : "bool"
+  } ],
+  "name" : "setApprovalForAll",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "resolver",
+    "type" : "address"
+  } ],
+  "name" : "setResolver",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "bool"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "interfaceID",
+    "type" : "bytes4"
+  } ],
+  "name" : "supportsInterface",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "from",
+    "type" : "address"
+  }, {
+    "name" : "to",
+    "type" : "address"
+  }, {
+    "name" : "tokenId",
+    "type" : "uint256"
+  } ],
+  "name" : "transferFrom",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "newOwner",
+    "type" : "address"
+  } ],
+  "name" : "transferOwnership",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+}, {
+  "outputs" : [ {
+    "name" : "",
+    "type" : "uint256"
+  } ],
+  "constant" : true,
+  "payable" : false,
+  "inputs" : [ ],
+  "name" : "transferPeriodEnds",
+  "stateMutability" : "view",
+  "type" : "function"
+}, {
+  "inputs" : [ {
+    "name" : "owner",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "approved",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "tokenId",
+    "type" : "uint256",
+    "indexed" : true
+  } ],
+  "name" : "Approval",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "owner",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "operator",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "approved",
+    "type" : "bool",
+    "indexed" : false
+  } ],
+  "name" : "ApprovalForAll",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "controller",
+    "type" : "address",
+    "indexed" : true
+  } ],
+  "name" : "ControllerAdded",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "controller",
+    "type" : "address",
+    "indexed" : true
+  } ],
+  "name" : "ControllerRemoved",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "id",
+    "type" : "uint256",
+    "indexed" : true
+  }, {
+    "name" : "owner",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "expires",
+    "type" : "uint256",
+    "indexed" : false
+  } ],
+  "name" : "NameMigrated",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "id",
+    "type" : "uint256",
+    "indexed" : true
+  }, {
+    "name" : "owner",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "expires",
+    "type" : "uint256",
+    "indexed" : false
+  } ],
+  "name" : "NameRegistered",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "id",
+    "type" : "uint256",
+    "indexed" : true
+  }, {
+    "name" : "expires",
+    "type" : "uint256",
+    "indexed" : false
+  } ],
+  "name" : "NameRenewed",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "previousOwner",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "newOwner",
+    "type" : "address",
+    "indexed" : true
+  } ],
+  "name" : "OwnershipTransferred",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "inputs" : [ {
+    "name" : "from",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "to",
+    "type" : "address",
+    "indexed" : true
+  }, {
+    "name" : "tokenId",
+    "type" : "uint256",
+    "indexed" : true
+  } ],
+  "name" : "Transfer",
+  "anonymous" : false,
+  "type" : "event"
+}, {
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "_ens",
+    "type" : "address"
+  }, {
+    "name" : "_previousRegistrar",
+    "type" : "address"
+  }, {
+    "name" : "_baseNode",
+    "type" : "bytes32"
+  }, {
+    "name" : "_transferPeriodEnds",
+    "type" : "uint256"
+  } ],
+  "stateMutability" : "nonpayable",
+  "type" : "constructor"
+} ]
 

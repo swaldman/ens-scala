@@ -40,10 +40,11 @@ import java.nio.charset.StandardCharsets.US_ASCII
 
 import scala.collection._
 
+import com.mchange.sc.v1.consuela._
 import com.mchange.sc.v1.consuela.ethereum.{EthAddress, EthHash}
 import com.mchange.sc.v1.consuela.ethereum.jsonrpc.Invoker
 import com.mchange.sc.v1.consuela.ethereum.specification.Denominations
-import com.mchange.sc.v1.consuela.ethereum.stub.TransactionInfo
+import com.mchange.sc.v1.consuela.ethereum.stub.{sol, TransactionInfo}
 
 /**
   *  See https://github.com/ethereum/EIPs/issues/137
@@ -108,5 +109,7 @@ package object ens extends Denominations {
 
   val StandardNameServiceTld = "eth"
   val StandardNameServiceReverseTld = "addr.reverse"
+
+  val ControllerInterfaceId = sol.Bytes4("0x018fac06".decodeHex)
 }
 
