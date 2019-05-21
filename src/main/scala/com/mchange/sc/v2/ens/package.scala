@@ -111,5 +111,17 @@ package object ens extends Denominations {
   val StandardNameServiceReverseTld = "addr.reverse"
 
   val ControllerInterfaceId = sol.Bytes4("0x018fac06".decodeHex)
+
+  object Commitment {
+    // MT: protected by this' (Commitment's) lock
+    private val random = new java.security.SecureRandom()
+
+    def newSecret() = this.synchronized {
+      val arr = Array.ofDim[Byte](32)
+      random.nextBytes( arr )
+      sol.Bytes32( arr )
+    }
+  }
+  final case class Commitment( hash : EthHash, secret : sol.Bytes32 )
 }
 

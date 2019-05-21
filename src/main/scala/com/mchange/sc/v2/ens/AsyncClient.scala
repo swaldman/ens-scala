@@ -143,7 +143,9 @@ class AsyncClient(
 
   private def stubsimplehash( str : String ) = sol.Bytes32( _simplehash( str ).bytes )
 
-  private def ethsigner    [T : EthSigner.Source] ( source : T ) : EthSigner  = implicitly[EthSigner.Source[T]].toEthSigner(source)
+  private def ethsigner[S : EthSigner.Source]( source : S ) : EthSigner  = implicitly[EthSigner.Source[S]].toEthSigner(source)
+
+  private def ethsender[S : EthSigner.Source]( source : S ) : stub.Sender.Signing = Sender.Basic( ethsigner(source) )
 
   private def ethaddress[T : EthAddress.Source]( source : T ) : EthAddress = implicitly[EthAddress.Source[T]].toEthAddress(source)
 
@@ -205,12 +207,12 @@ class AsyncClient(
   }
 
   def setOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, path : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = onlyOwner( signer, path ) {
-    nameService.txn.setOwner( stubnamehash( path ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+    nameService.txn.setOwner( stubnamehash( path ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
   }
 
   def setSubnodeOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, parentPath : String, subnodeLabel : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
     onlyOwner( signer, parentPath ) {
-      nameService.txn.setSubnodeOwner( stubnamehash( parentPath ), stubsimplehash( subnodeLabel ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+      nameService.txn.setSubnodeOwner( stubnamehash( parentPath ), stubsimplehash( subnodeLabel ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
     }
   }
 
@@ -220,7 +222,7 @@ class AsyncClient(
   }
 
   def setTTL[S : EthSigner.Source]( signer : S, name : String, ttl : Long, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = onlyOwner( signer, name ) {
-    nameService.txn.setTTL( stubnamehash( name ), sol.UInt64( ttl ), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+    nameService.txn.setTTL( stubnamehash( name ), sol.UInt64( ttl ), nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
   }
 
   private def _resolver( stubnodehash : sol.Bytes32 ) : Future[Option[EthAddress]] = {
@@ -231,7 +233,7 @@ class AsyncClient(
   def resolver( path : String ) : Future[Option[EthAddress]] = _resolver( stubnamehash( path ) )
 
   def setResolver[S : EthSigner.Source, T : EthAddress.Source]( signer : S, path : String, resolver : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = onlyOwner( signer, path ) {
-    nameService.txn.setResolver( stubnamehash( path ), ethaddress( resolver ), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+    nameService.txn.setResolver( stubnamehash( path ), ethaddress( resolver ), nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
   }
   
   private def withResolver[T]( path : String )( op : ( sol.Bytes32, AsyncResolver ) => Future[T] ) : Future[T] = {
@@ -259,7 +261,37 @@ class AsyncClient(
   def setAddress[S : EthSigner.Source, T : EthAddress.Source]( signer : S, path : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
     val _address = ethaddress( address )
     withResolver( path ){ ( stubnodehash, resolver ) =>
-      resolver.txn.setAddr( stubnodehash, _address, nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+      resolver.txn.setAddr( stubnodehash, _address, nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
+    }
+  }
+
+  def minCommitmentAgeInSeconds() : Future[BigInt] = {
+    for {
+      topLevelController        <- ftopLevelController
+      minCommitmentAgeInSeconds <- topLevelController.view.minCommitmentAge()( Sender.Default )
+    }
+    yield {
+      minCommitmentAgeInSeconds.widen
+    }
+  }
+
+  def maxCommitmentAgeInSeconds() : Future[BigInt] = {
+    for {
+      topLevelController        <- ftopLevelController
+      maxCommitmentAgeInSeconds <- topLevelController.view.maxCommitmentAge()( Sender.Default )
+    }
+    yield {
+      maxCommitmentAgeInSeconds.widen
+    }
+  }
+
+  def minRegistrationDurationInSeconds() : Future[BigInt] = {
+    for {
+      topLevelController   <- ftopLevelController
+      minDurationInSeconds <- topLevelController.view.MIN_REGISTRATION_DURATION()( Sender.Default )
+    }
+    yield {
+      minDurationInSeconds.widen
     }
   }
 
@@ -293,6 +325,41 @@ class AsyncClient(
     }
     yield {
       stubBool
+    }
+  }
+
+  def makeCommitment[T : EthAddress.Source]( name : String, owner : T ) : Future[Commitment] = {
+    requireSimpleName( name )
+
+    val secret = Commitment.newSecret()
+    for {
+      topLevelController <- ftopLevelController
+      hash               <- topLevelController.view.makeCommitment( name, ethaddress(owner), secret )( Sender.Default )
+    }
+    yield {
+      Commitment( EthHash.withBytes(hash.widen), secret )
+    }
+  }
+
+  def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, commitment : Commitment, paymentInWei : BigInt ) : Future[TransactionInfo.Async] = {
+    requireSimpleName( name )
+    for {
+      topLevelController <- ftopLevelController
+      txnInfo            <- topLevelController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), commitment.secret, payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ) )( ethsender( signer ) )
+    }
+    yield {
+      txnInfo
+    }
+  }
+
+  def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt ) : Future[TransactionInfo.Async] = {
+    requireSimpleName( name )
+    for {
+      topLevelController <- ftopLevelController
+      txnInfo            <- topLevelController.txn.renew( name, sol.UInt256(durationInSeconds) )( ethsender(signer) )
+    }
+    yield {
+      txnInfo
     }
   }
 
