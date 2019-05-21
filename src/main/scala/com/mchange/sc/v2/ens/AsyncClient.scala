@@ -182,40 +182,40 @@ class AsyncClient(
     }
   }
 
-  def owner( name : String ) : Future[Option[EthAddress]] = {
-    val fAddr = nameService.view.owner( stubnamehash( name ) )( Sender.Default )
+  def owner( path : String ) : Future[Option[EthAddress]] = {
+    val fAddr = nameService.view.owner( stubnamehash( path ) )( Sender.Default )
     fAddr.map( addr => if ( addr == EthAddress.Zero ) None else Some( addr ) )
   }
 
-  private def onlyOwner[S : EthSigner.Source]( signer : S, name : String )( op : => Future[TransactionInfo.Async] ) : Future[TransactionInfo.Async] = {
-    owner( name ).flatMap { 
+  private def onlyOwner[S : EthSigner.Source]( signer : S, path : String )( op : => Future[TransactionInfo.Async] ) : Future[TransactionInfo.Async] = {
+    owner( path ).flatMap { 
       case Some( owner ) => {
         val es = ethsigner(signer)
         if ( owner == es.address ) {
           op
         }
         else {
-          Future.failed( new OnlyOwnerException( name, es.address, owner ) )
+          Future.failed( new OnlyOwnerException( path, es.address, owner ) )
         }
       }
       case None => {
-        Future.failed( new MustBeOwnedException( name ) )
+        Future.failed( new MustBeOwnedException( path ) )
       }
     }
   }
 
-  def setOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = onlyOwner( signer, name ) {
-    nameService.txn.setOwner( stubnamehash( name ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+  def setOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, path : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = onlyOwner( signer, path ) {
+    nameService.txn.setOwner( stubnamehash( path ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
   }
 
-  def setSubnodeOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, parentName : String, subnodeLabel : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
-    onlyOwner( signer, parentName ) {
-      nameService.txn.setSubnodeOwner( stubnamehash( parentName ), stubsimplehash( subnodeLabel ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+  def setSubnodeOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, parentPath : String, subnodeLabel : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
+    onlyOwner( signer, parentPath ) {
+      nameService.txn.setSubnodeOwner( stubnamehash( parentPath ), stubsimplehash( subnodeLabel ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
     }
   }
 
-  def ttl( name : String ) : Future[JDuration] = {
-    val fSeconds = nameService.view.ttl( stubnamehash( name ) )( Sender.Default )
+  def ttl( path : String ) : Future[JDuration] = {
+    val fSeconds = nameService.view.ttl( stubnamehash( path ) )( Sender.Default )
     fSeconds.map( seconds => JDuration.ofSeconds( seconds.widen.toValidLong ) )
   }
 
@@ -228,14 +228,14 @@ class AsyncClient(
     fAddr.map( addr => if ( addr == EthAddress.Zero ) None else Some( addr ) )
   }
 
-  def resolver( name : String ) : Future[Option[EthAddress]] = _resolver( stubnamehash( name ) )
+  def resolver( path : String ) : Future[Option[EthAddress]] = _resolver( stubnamehash( path ) )
 
-  def setResolver[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, resolver : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = onlyOwner( signer, name ) {
-    nameService.txn.setResolver( stubnamehash( name ), ethaddress( resolver ), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
+  def setResolver[S : EthSigner.Source, T : EthAddress.Source]( signer : S, path : String, resolver : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = onlyOwner( signer, path ) {
+    nameService.txn.setResolver( stubnamehash( path ), ethaddress( resolver ), nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
   }
   
-  private def withResolver[T]( name : String )( op : ( sol.Bytes32, AsyncResolver ) => Future[T] ) : Future[T] = {
-    val stubnodehash = stubnamehash( name )
+  private def withResolver[T]( path : String )( op : ( sol.Bytes32, AsyncResolver ) => Future[T] ) : Future[T] = {
+    val stubnodehash = stubnamehash( path )
     val fmbResolver : Future[Option[EthAddress]] = _resolver( stubnodehash )
     fmbResolver flatMap { mbResolver =>
       val mbFut = mbResolver map { resolverAddr =>
@@ -243,22 +243,22 @@ class AsyncClient(
         op( stubnodehash, resolver )
       }
       mbFut match {
-        case None        => Future.failed( new NoResolverSetException( name ) )
+        case None        => Future.failed( new NoResolverSetException( path ) )
         case Some( fut ) => fut
       }
     }
   }
 
-  def address( name : String ) : Future[Option[EthAddress]] = {
-    withResolver( name ){ ( stubnodehash, resolver ) =>
+  def address( path : String ) : Future[Option[EthAddress]] = {
+    withResolver( path ){ ( stubnodehash, resolver ) =>
       val fAddr = resolver.view.addr( stubnodehash )( Sender.Default )
       fAddr.map( addr => if ( addr == EthAddress.Zero ) None else Some( addr ) )
     } recover { case e : NoResolverSetException => None }
   }
 
-  def setAddress[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
+  def setAddress[S : EthSigner.Source, T : EthAddress.Source]( signer : S, path : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
     val _address = ethaddress( address )
-    withResolver( name ){ ( stubnodehash, resolver ) =>
+    withResolver( path ){ ( stubnodehash, resolver ) =>
       resolver.txn.setAddr( stubnodehash, _address, nonce = toStubNonce( forceNonce ) )( Sender.Basic( ethsigner(signer) ) )
     }
   }
@@ -299,6 +299,5 @@ class AsyncClient(
   private def requireSimpleName( name : String ) = {
     require( name.indexOf('.') < 0, s"A simple name (not a path, no internal periods) is required, but found '${name}'." )
   }
-
 }
 
