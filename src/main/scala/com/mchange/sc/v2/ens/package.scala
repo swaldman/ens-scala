@@ -51,13 +51,6 @@ import com.mchange.sc.v1.consuela.ethereum.stub.{sol, TransactionInfo}
   */ 
 package object ens extends Denominations {
   class EnsException( message : String, cause : Throwable = null ) extends Exception( message, cause )
-  class RevealerIsNotBidderException( revealerAddress : EthAddress, bid : Bid ) extends EnsException( s"Revealer with address '0x${revealerAddress.hex}' cannot reveal bid '${bid}'." )
-  class UnexpectedBidStoreStateException( bid : Bid, state : BidStore.State ) extends EnsException(
-    "We expect bids to be in state 'Accepted' when they are revealed. " +
-      s"Bid '${bid}' is in state '${state}. " +
-      "To ignore this and force an attempt to reveal, set 'force = true' when revealing bids."
-  )
-  class SomeRevealsFailedException( tally : immutable.Seq[Either[FailedReveal,(Bid, TransactionInfo.Base)]] ) extends EnsException( s"At least one attempt to reveal multiple bis has failed. tally: ${tally}" )
   class NoResolverSetException( entity : String ) extends EnsException( s"No resolver set for entity '${entity}'." )
   class OnlyOwnerException( name : String, caller : EthAddress, owner : EthAddress ) extends EnsException( s"Only the owner of name '${name}', 0x${owner.hex}, can call this function. This call by 0x${caller.hex} would fail." )
   class MustBeOwnedException( name : String ) extends EnsException( s"Only the owner of name '${name}' can call this function, but '${name}' has no owner." )

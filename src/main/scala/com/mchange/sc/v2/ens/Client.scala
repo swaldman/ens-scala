@@ -33,6 +33,8 @@
  *
  */
 
+
+
 package com.mchange.sc.v2.ens
 
 import contract._
@@ -62,7 +64,6 @@ object Client {
   def apply[ U : URLSource ](
     jsonRpcUrl          : U,
     nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
-    tld                 : String                   = StandardNameServiceTld,
     reverseTld          : String                   = StandardNameServiceReverseTld,
     gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
     gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
@@ -90,14 +91,13 @@ object Client {
       transactionLogger   = transactionLogger,
       eventConfirmations  = eventConfirmations
     )( implicitly[URLSource[U]], efactory, poller, scheduler, econtext )
-    new Client( nameServiceAddress, tld, reverseTld, executionTimeout )( scontext )
+    new Client( nameServiceAddress, reverseTld, executionTimeout )( scontext )
   }
 
   final object LoadBalanced {
     def apply[ U : URLSource ](
       jsonRpcUrls         : immutable.Iterable[U],
       nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
-      tld                 : String                   = StandardNameServiceTld,
       reverseTld          : String                   = StandardNameServiceReverseTld,
       gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
       gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
@@ -109,7 +109,7 @@ object Client {
       eventConfirmations  : Int                      = stub.Context.Default.EventConfirmations,
       executionTimeout    : Duration                 = Client.DefaultExecutionTimeout
     )( implicit
-      efactory  : Exchanger.Factory  = stub.Context.Default.ExchangerFactory,
+      efactory  : Exchanger.Factory       = stub.Context.Default.ExchangerFactory,
       poller    : Poller                  = stub.Context.Default.Poller,
       scheduler : Scheduler               = stub.Context.Default.Scheduler,
       econtext  : ExecutionContext        = stub.Context.Default.ExecutionContext
@@ -125,18 +125,17 @@ object Client {
         transactionLogger   = transactionLogger,
         eventConfirmations  = eventConfirmations
       )( implicitly[URLSource[U]], efactory, poller, scheduler, econtext )
-      new Client( nameServiceAddress, tld, reverseTld, executionTimeout )( scontext )
+      new Client( nameServiceAddress, reverseTld, executionTimeout )( scontext )
     }
   }
 }
 class Client(
   val nameServiceAddress : EthAddress = StandardNameServiceAddress,
-  val tld                : String     = StandardNameServiceTld,
   val reverseTld         : String     = StandardNameServiceReverseTld,
   val executionTimeout   : Duration   = Client.DefaultExecutionTimeout
 )( implicit scontext : stub.Context ) {
 
-  private val inner : AsyncClient = new AsyncClient( nameServiceAddress, tld, reverseTld )( scontext )
+  private val inner : AsyncClient = new AsyncClient( nameServiceAddress, reverseTld )( scontext )
 
   private def await[T]( ft : Future[T] ) = Await.result( ft, executionTimeout )
 
@@ -167,6 +166,48 @@ class Client(
   def setAddress[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, address : T, forceNonce : Option[BigInt] = None ) : TransactionInfo = {
     awaitTransactionInfo( inner.setAddress( signer, name, address, forceNonce = forceNonce ) )
   }
+
+  final object forTopLevelDomain {
+    // MT: access controlled by this' lock
+    private val tldToController : mutable.Map[String,forRegistrarManagedDomain] = mutable.Map.empty
+
+    def apply( tld : String ) : forRegistrarManagedDomain = this.synchronized {
+      tldToController.getOrElseUpdate( tld, forRegistrarManagedDomain(tld) )
+    }
+  }
+
+  final object forRegistrarManagedDomain {
+    def apply( domain : String ) : forRegistrarManagedDomain =  new forRegistrarManagedDomain( inner.forRegistrarManagedDomain( domain ) )
+  }
+  final class forRegistrarManagedDomain( _inner : inner.forRegistrarManagedDomain ) {
+
+    def minCommitmentAgeInSeconds : BigInt = await( _inner.minCommitmentAgeInSeconds )
+
+    def maxCommitmentAgeInSeconds : BigInt = await( _inner.maxCommitmentAgeInSeconds )
+
+    def minRegistrationDurationInSeconds : BigInt = await( _inner.minRegistrationDurationInSeconds )
+
+    def rentPriceInWei( name : String, durationInSeconds : BigInt ) : BigInt = await( _inner.rentPriceInWei( name, durationInSeconds ) )
+
+    def isValid( name : String ) : Boolean = await( _inner.isValid( name ) )
+
+    def isAvailable( name : String ) : Boolean = await( _inner.isAvailable( name ) )
+
+    def nameExpires( name : String ) : Instant = await( _inner.nameExpires( name ) )
+
+    def makeCommitment[T : EthAddress.Source]( name : String, owner : T ) : Commitment = await( _inner.makeCommitment( name, owner ) )
+
+    def commit[S : EthSigner.Source]( signer : S, commitment : Commitment ) : TransactionInfo = awaitTransactionInfo( _inner.commit( signer, commitment ) )
+
+    def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, commitment : Commitment, paymentInWei : BigInt ) : TransactionInfo = {
+      awaitTransactionInfo( _inner.register( signer, name, owner, durationInSeconds, commitment, paymentInWei ) )
+    }
+
+    def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt ) : TransactionInfo = {
+      awaitTransactionInfo( _inner.renew( signer, name, durationInSeconds ) )
+    }
+  }
 }
+
 
 

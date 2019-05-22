@@ -62,7 +62,6 @@ object AsyncClient {
   def apply[ U : URLSource ](
     jsonRpcUrl          : U,
     nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
-    tld                 : String                   = StandardNameServiceTld,
     reverseTld          : String                   = StandardNameServiceReverseTld,
     gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
     gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
@@ -89,14 +88,13 @@ object AsyncClient {
       transactionLogger   = transactionLogger,
       eventConfirmations  = eventConfirmations
     )( implicitly[URLSource[U]], efactory, poller, scheduler, econtext )
-    new AsyncClient( nameServiceAddress, tld, reverseTld )( scontext )
+    new AsyncClient( nameServiceAddress, reverseTld )( scontext )
   }
 
   final object LoadBalanced {
     def apply[ U : URLSource ](
       jsonRpcUrls         : immutable.Iterable[U],
       nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
-      tld                 : String                   = StandardNameServiceTld,
       reverseTld          : String                   = StandardNameServiceReverseTld,
       gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
       gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
@@ -123,13 +121,12 @@ object AsyncClient {
         transactionLogger   = transactionLogger,
         eventConfirmations  = eventConfirmations
       )( implicitly[URLSource[U]], efactory, poller, scheduler, econtext )
-      new AsyncClient( nameServiceAddress, tld, reverseTld )( scontext )
+      new AsyncClient( nameServiceAddress, reverseTld )( scontext )
     }
   }
 }
 class AsyncClient(
   val nameServiceAddress : EthAddress = StandardNameServiceAddress,
-  val tld                : String     = StandardNameServiceTld,
   val reverseTld         : String     = StandardNameServiceReverseTld
 )( implicit scontext : stub.Context ) {
 
@@ -139,9 +136,11 @@ class AsyncClient(
 
   private def stubnamehash( name : String ) : sol.Bytes32 = sol.Bytes32( namehash( name ).bytes )
 
-  private def _simplehash( str : String ) = componentHash( str )
+  private def _labelhash( str : String ) = componentHash( str )
 
-  private def stubsimplehash( str : String ) = sol.Bytes32( _simplehash( str ).bytes )
+  private def stublabelhash( str : String ) = sol.Bytes32( _labelhash( str ).bytes )
+
+  private def stublabelhash_uint( str : String ) = sol.UInt256( BigInt( 1, _labelhash( str ).toByteArray ) )
 
   private def ethsigner[S : EthSigner.Source]( source : S ) : EthSigner  = implicitly[EthSigner.Source[S]].toEthSigner(source)
 
@@ -156,31 +155,9 @@ class AsyncClient(
     }
   }
 
-  private lazy val fregistrar : Future[AsyncRegistrar] = {
-    owner( tld ) map { mbRegistrarAddress =>
-      new AsyncRegistrar( mbRegistrarAddress.get ) // we assert that it exists
-    }
-  }
-
   private lazy val freverseRegistrar : Future[AsyncReverseRegistrar] = {
     owner( reverseTld ) map { mbReverseRegistrarAddress =>
       new AsyncReverseRegistrar( mbReverseRegistrarAddress.get ) // we assert that it exists
-    }
-  }
-
-  private lazy val ftopLevelResolver : Future[AsyncResolver] = {
-    resolver( tld ).map( _.getOrElse( throw new NoResolverSetException( tld ) ) ).map { address =>
-      new AsyncResolver( address )
-    }
-  }
-
-  private lazy val ftopLevelController : Future[AsyncController] = {
-    for {
-      topLevelResolver          <- ftopLevelResolver
-      topLevelControllerAddress <- topLevelResolver.view.interfaceImplementer( stubnamehash( tld ), ControllerInterfaceId )( Sender.Default )
-    }
-    yield {
-      new AsyncController( topLevelControllerAddress )
     }
   }
 
@@ -212,7 +189,7 @@ class AsyncClient(
 
   def setSubnodeOwner[S : EthSigner.Source, T : EthAddress.Source]( signer : S, parentPath : String, subnodeLabel : String, address : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
     onlyOwner( signer, parentPath ) {
-      nameService.txn.setSubnodeOwner( stubnamehash( parentPath ), stubsimplehash( subnodeLabel ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
+      nameService.txn.setSubnodeOwner( stubnamehash( parentPath ), stublabelhash( subnodeLabel ), ethaddress(address), nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
     }
   }
 
@@ -265,106 +242,163 @@ class AsyncClient(
     }
   }
 
-  def minCommitmentAgeInSeconds() : Future[BigInt] = {
-    for {
-      topLevelController        <- ftopLevelController
-      minCommitmentAgeInSeconds <- topLevelController.view.minCommitmentAge()( Sender.Default )
-    }
-    yield {
-      minCommitmentAgeInSeconds.widen
+  final object forTopLevelDomain {
+    // MT: access controlled by this' lock
+    private val tldToController : mutable.Map[String,forRegistrarManagedDomain] = mutable.Map.empty
+
+    def apply( tld : String ) : forRegistrarManagedDomain = this.synchronized {
+      tldToController.getOrElseUpdate( tld, forRegistrarManagedDomain(tld) )
     }
   }
 
-  def maxCommitmentAgeInSeconds() : Future[BigInt] = {
-    for {
-      topLevelController        <- ftopLevelController
-      maxCommitmentAgeInSeconds <- topLevelController.view.maxCommitmentAge()( Sender.Default )
-    }
-    yield {
-      maxCommitmentAgeInSeconds.widen
-    }
+  final object forRegistrarManagedDomain {
+    def apply( domain : String ) : forRegistrarManagedDomain =  new forRegistrarManagedDomain( domain )
   }
+  final class forRegistrarManagedDomain( domain : String ) {
 
-  def minRegistrationDurationInSeconds() : Future[BigInt] = {
-    for {
-      topLevelController   <- ftopLevelController
-      minDurationInSeconds <- topLevelController.view.MIN_REGISTRATION_DURATION()( Sender.Default )
+    private lazy val fregistrar : Future[AsyncRegistrar] = {
+      owner( domain ) map { mbRegistrarAddress =>
+        new AsyncRegistrar( mbRegistrarAddress.get ) // we assert that it exists
+      }
     }
-    yield {
-      minDurationInSeconds.widen
-    }
-  }
 
-  def rentPriceInWei( name : String, durationInSeconds : BigInt ) : Future[BigInt] = {
-    requireSimpleName( name )
-    for {
-      topLevelController <- ftopLevelController
-      stubWei            <- topLevelController.view.rentPrice( name, sol.UInt( durationInSeconds ) )( Sender.Default )
+    private lazy val ftopLevelResolver : Future[AsyncResolver] = {
+      resolver( domain ).map( _.getOrElse( throw new NoResolverSetException( domain ) ) ).map { address =>
+        new AsyncResolver( address )
+      }
     }
-    yield {
-      stubWei.widen
-    }
-  }
 
-  def isValid( name : String ) : Future[Boolean] = {
-    requireSimpleName( name )
-    for {
-      topLevelController <- ftopLevelController
-      stubBool           <- topLevelController.view.valid( name )( Sender.Default )
+    private lazy val ftopLevelController : Future[AsyncController] = {
+      for {
+        topLevelResolver          <- ftopLevelResolver
+        topLevelControllerAddress <- topLevelResolver.view.interfaceImplementer( stubnamehash( domain ), ControllerInterfaceId )( Sender.Default )
+      }
+      yield {
+        new AsyncController( topLevelControllerAddress )
+      }
     }
-    yield {
-      stubBool
-    }
-  }
 
-  def isAvailable( name : String ) : Future[Boolean] = {
-    requireSimpleName( name )
-    for {
-      topLevelController <- ftopLevelController
-      stubBool           <- topLevelController.view.available( name )( Sender.Default )
+    def minCommitmentAgeInSeconds : Future[BigInt] = {
+      for {
+        topLevelController        <- ftopLevelController
+        minCommitmentAgeInSeconds <- topLevelController.view.minCommitmentAge()( Sender.Default )
+      }
+      yield {
+        minCommitmentAgeInSeconds.widen
+      }
     }
-    yield {
-      stubBool
-    }
-  }
 
-  def makeCommitment[T : EthAddress.Source]( name : String, owner : T ) : Future[Commitment] = {
-    requireSimpleName( name )
+    def maxCommitmentAgeInSeconds : Future[BigInt] = {
+      for {
+        topLevelController        <- ftopLevelController
+        maxCommitmentAgeInSeconds <- topLevelController.view.maxCommitmentAge()( Sender.Default )
+      }
+      yield {
+        maxCommitmentAgeInSeconds.widen
+      }
+    }
 
-    val secret = Commitment.newSecret()
-    for {
-      topLevelController <- ftopLevelController
-      hash               <- topLevelController.view.makeCommitment( name, ethaddress(owner), secret )( Sender.Default )
+    def minRegistrationDurationInSeconds : Future[BigInt] = {
+      for {
+        topLevelController   <- ftopLevelController
+        minDurationInSeconds <- topLevelController.view.MIN_REGISTRATION_DURATION()( Sender.Default )
+      }
+      yield {
+        minDurationInSeconds.widen
+      }
     }
-    yield {
-      Commitment( EthHash.withBytes(hash.widen), secret )
-    }
-  }
 
-  def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, commitment : Commitment, paymentInWei : BigInt ) : Future[TransactionInfo.Async] = {
-    requireSimpleName( name )
-    for {
-      topLevelController <- ftopLevelController
-      txnInfo            <- topLevelController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), commitment.secret, payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ) )( ethsender( signer ) )
+    def rentPriceInWei( name : String, durationInSeconds : BigInt ) : Future[BigInt] = {
+      requireSimpleName( name )
+      for {
+        topLevelController <- ftopLevelController
+        stubWei            <- topLevelController.view.rentPrice( name, sol.UInt( durationInSeconds ) )( Sender.Default )
+      }
+      yield {
+        stubWei.widen
+      }
     }
-    yield {
-      txnInfo
-    }
-  }
 
-  def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt ) : Future[TransactionInfo.Async] = {
-    requireSimpleName( name )
-    for {
-      topLevelController <- ftopLevelController
-      txnInfo            <- topLevelController.txn.renew( name, sol.UInt256(durationInSeconds) )( ethsender(signer) )
+    def isValid( name : String ) : Future[Boolean] = {
+      requireSimpleName( name )
+      for {
+        topLevelController <- ftopLevelController
+        stubBool           <- topLevelController.view.valid( name )( Sender.Default )
+      }
+      yield {
+        stubBool
+      }
     }
-    yield {
-      txnInfo
-    }
-  }
 
-  private def requireSimpleName( name : String ) = {
-    require( name.indexOf('.') < 0, s"A simple name (not a path, no internal periods) is required, but found '${name}'." )
+    def isAvailable( name : String ) : Future[Boolean] = {
+      requireSimpleName( name )
+      for {
+        topLevelController <- ftopLevelController
+        stubBool           <- topLevelController.view.available( name )( Sender.Default )
+      }
+      yield {
+        stubBool
+      }
+    }
+
+    def nameExpires( name : String ) : Future[Instant] = {
+      for {
+        registrar <- fregistrar
+        unixtime  <- registrar.view.nameExpires( stublabelhash_uint( name ) )( Sender.Default )
+      }
+      yield {
+        Instant.ofEpochSecond( unixtime.widen.toLong )
+      }
+    }
+
+    def makeCommitment[T : EthAddress.Source]( name : String, owner : T ) : Future[Commitment] = {
+      requireSimpleName( name )
+
+      val secret = Commitment.newSecret()
+      for {
+        topLevelController <- ftopLevelController
+        hash               <- topLevelController.view.makeCommitment( name, ethaddress(owner), secret )( Sender.Default )
+      }
+      yield {
+        Commitment( EthHash.withBytes(hash.widen), secret )
+      }
+    }
+
+    def commit[S : EthSigner.Source]( signer : S, commitment : Commitment ) : Future[TransactionInfo.Async] = {
+      for {
+        topLevelController <- ftopLevelController
+        txnInfo            <- topLevelController.txn.commit( sol.Bytes32(commitment.hash.bytes) )( ethsender( signer ) )
+      }
+      yield {
+        txnInfo
+      }
+    }
+
+    def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, commitment : Commitment, paymentInWei : BigInt ) : Future[TransactionInfo.Async] = {
+      requireSimpleName( name )
+      for {
+        topLevelController <- ftopLevelController
+        txnInfo            <- topLevelController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), commitment.secret, payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ) )( ethsender( signer ) )
+      }
+      yield {
+        txnInfo
+      }
+    }
+
+    def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt ) : Future[TransactionInfo.Async] = {
+      requireSimpleName( name )
+      for {
+        topLevelController <- ftopLevelController
+        txnInfo            <- topLevelController.txn.renew( name, sol.UInt256(durationInSeconds) )( ethsender(signer) )
+      }
+      yield {
+        txnInfo
+      }
+    }
+
+    private def requireSimpleName( name : String ) = {
+      require( name.indexOf('.') < 0, s"A simple name (not a path, no internal periods) is required, but found '${name}'." )
+    }
   }
 }
 
