@@ -37,7 +37,9 @@ package com.mchange.sc.v2
 
 import java.net.IDN
 import java.nio.charset.StandardCharsets.US_ASCII
+import java.util.Locale
 
+import scala.annotation.tailrec
 import scala.collection._
 
 import com.mchange.sc.v1.consuela._
@@ -51,9 +53,13 @@ import com.mchange.sc.v1.consuela.ethereum.stub.{sol, TransactionInfo}
   */ 
 package object ens extends Denominations {
   class EnsException( message : String, cause : Throwable = null ) extends Exception( message, cause )
+  class NoRegistrarSetException( entity : String ) extends EnsException( s"No registrar set for entity '${entity}'" )
   class NoResolverSetException( entity : String ) extends EnsException( s"No resolver set for entity '${entity}'." )
+  class NoControllerSetException( entity : String ) extends EnsException( s"No controller set for entity '${entity}'." )
   class OnlyOwnerException( name : String, caller : EthAddress, owner : EthAddress ) extends EnsException( s"Only the owner of name '${name}', 0x${owner.hex}, can call this function. This call by 0x${caller.hex} would fail." )
   class MustBeOwnedException( name : String ) extends EnsException( s"Only the owner of name '${name}' can call this function, but '${name}' has no owner." )
+  class BadEnsPathException( message : String, cause : Throwable = null ) extends EnsException( message, cause )
+  class BadRegistrarException( message : String, cause : Throwable = null ) extends EnsException( message, cause )
 
   // bring these into the ens package for convenience
   val  MarkupOrOverride = Invoker.MarkupOrOverride
@@ -71,6 +77,7 @@ package object ens extends Denominations {
     val arr = if ( name.length == 0 ) Array.empty[String] else name.split("""\.""")
     val len = arr.length
 
+    @tailrec
     def build( nextIndex : Int, accum : List[String] ) : List[String] = {
       nextIndex match {
         case `len` => accum
@@ -80,13 +87,19 @@ package object ens extends Denominations {
 
     build(0, Nil)
   }
-  def toBytes( nameComponent : String ) = IDN.toASCII( nameComponent, IDN.USE_STD3_ASCII_RULES ).getBytes( US_ASCII )
+  def toBytes( nameComponent : String ) = IDN.toASCII( nameComponent.toLowerCase( Locale.US ), IDN.USE_STD3_ASCII_RULES ).getBytes( US_ASCII )
 
   def componentHash( component : String ) : EthHash = EthHash.hash( toBytes( component ) )
 
+  def labelhash( label : String ) : EthHash = componentHash( label )
+
   def namehash( name : String ) : EthHash = {
-    val components = tokenizeReverse( name )
-    components.foldLeft( NullHash ) { ( last, next ) =>
+    val reverseComponents = tokenizeReverse( name )
+    namehashReverseComponents( reverseComponents )
+  }
+
+  private def namehashReverseComponents( reverseComponents : List[String] ) : EthHash = {
+    reverseComponents.foldLeft( NullHash ) { ( last, next ) =>
       EthHash.hash( last.bytes ++ componentHash( next ).bytes )
     }
   }
@@ -103,9 +116,13 @@ package object ens extends Denominations {
   val StandardNameServiceTld = "eth"
   val StandardNameServiceReverseTld = "addr.reverse"
 
-  val ControllerInterfaceId = sol.Bytes4("0x018fac06".decodeHex)
+  final object InterfaceId {
+    val Controller                = sol.Bytes4("0x018fac06".decodeHex)
+    val NftRegistrar              = sol.Bytes4("0x6ccb2df4".decodeHex)
+    val MigratableLegacyRegistrar = sol.Bytes4("0x7ba18ba1".decodeHex)
+  }
 
-  object Commitment {
+  final object Commitment {
     // MT: protected by this' (Commitment's) lock
     private val random = new java.security.SecureRandom()
 
@@ -116,5 +133,73 @@ package object ens extends Denominations {
     }
   }
   final case class Commitment( hash : EthHash, secret : sol.Bytes32 )
+
+  final object ParsedPath {
+    case class Subnode private [ParsedPath] ( componentsReversed : List[String] ) extends HasBaseName {
+      assert( componentsReversed.length >= 3, s"Subnodes should have three or more components, but found ${componentsReversed}." )
+
+      lazy val subnode : String = componentsReversed.drop(2).reverse.mkString(".")
+    }
+    case class BaseNameTld private [ParsedPath] ( componentsReversed : List[String] ) extends HasBaseName {
+      assert( componentsReversed.length == 2, s"BaseNameTlds should have two components, but found ${componentsReversed}." )
+    }
+    case class Tld private [ParsedPath] ( componentsReversed : List[String] ) extends Forward {
+      assert( componentsReversed.length == 1, s"Forward Tlds should have just one component, but found ${componentsReversed}." )
+    }
+    case class Reverse private [ParsedPath] ( componentsReversed : List[String] ) extends ParsedPath {
+      assert( componentsReversed.length == 3 && componentsReversed.take(2) == "reverse" :: "addr" :: Nil, s"Unexpected reverse namespace! [componentsReversed: ${componentsReversed}]" )
+
+      lazy val address = EthAddress( componentsReversed.last )
+    }
+    sealed trait HasBaseName extends Forward {
+      lazy val baseName : String = componentsReversed.tail.head
+      lazy val parent : ParsedPath.Forward = ParsedPath.Forward( components.tail.reverse )
+      lazy val label : String = components.head
+
+      def baseNameTld : Tuple2[String,String] = ( baseName, tld )
+    }
+    final object Forward {
+      def apply( path : String ) : ParsedPath.Forward = {
+        val componentsReversed = tokenizeReverse( path )
+        this.apply( componentsReversed )
+      }
+      def apply( componentsReversed : List[String] ) : ParsedPath.Forward = {
+        componentsReversed.length match {
+          case 0 => throw new BadEnsPathException( s"Empty path is not a valid forward ENS name." )
+          case 1 => Tld( componentsReversed )
+          case 2 => BaseNameTld( componentsReversed )
+          case _ => Subnode( componentsReversed )
+        }
+      }
+    }
+    sealed trait Forward extends ParsedPath {
+      lazy val topLevelDomain : String = componentsReversed.head
+      def tld : String = this.topLevelDomain
+    }
+    def apply( path : String ) : ParsedPath = {
+      val componentsReversed = tokenizeReverse( path )
+      this.apply( componentsReversed )
+    }
+    def apply( componentsReversed : List[String] ) : ParsedPath = {
+      componentsReversed match {
+        case Nil                      => throw new BadEnsPathException( s"Empty path is not a valid ENS name." )
+        case "reverse" :: "addr" :: _ => Reverse( componentsReversed )
+        case _                        => Forward( componentsReversed )
+      }
+    }
+  }
+  sealed trait ParsedPath {
+    def componentsReversed : List[String]
+
+    lazy val components = componentsReversed.reverse
+
+    lazy val fullPath = components.mkString(".")
+
+    def fullName = fullPath
+
+    lazy val namehash = namehashReverseComponents( componentsReversed )
+
+    override def toString = super.toString() + s"[fullPath=${fullPath}]"
+  }
 }
 

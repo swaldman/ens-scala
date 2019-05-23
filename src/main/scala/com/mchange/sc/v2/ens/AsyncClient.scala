@@ -47,7 +47,7 @@ import scala.util.{Try,Success,Failure}
 import scala.util.control.NonFatal
 
 import com.mchange.sc.v1.consuela._
-import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash,EthPrivateKey,EthSigner,wallet}
+import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthChainId,EthHash,EthPrivateKey,EthSigner,wallet}
 import com.mchange.sc.v1.consuela.ethereum.jsonrpc
 
 import com.mchange.sc.v1.consuela.ethereum.stub
@@ -61,8 +61,8 @@ object AsyncClient {
 
   def apply[ U : URLSource ](
     jsonRpcUrl          : U,
+    chainId             : Option[EthChainId]       = stub.Context.Default.ChainId,
     nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
-    reverseTld          : String                   = StandardNameServiceReverseTld,
     gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
     gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
     pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
@@ -79,6 +79,7 @@ object AsyncClient {
   ) = {
     val scontext = stub.Context.fromUrl(
       jsonRpcUrl          = jsonRpcUrl,
+      chainId             = chainId,
       gasPriceTweak       = gasPriceTweak,
       gasLimitTweak       = gasLimitTweak,
       pollPeriod          = pollPeriod,
@@ -88,14 +89,14 @@ object AsyncClient {
       transactionLogger   = transactionLogger,
       eventConfirmations  = eventConfirmations
     )( implicitly[URLSource[U]], efactory, poller, scheduler, econtext )
-    new AsyncClient( nameServiceAddress, reverseTld )( scontext )
+    new AsyncClient( nameServiceAddress )( scontext )
   }
 
   final object LoadBalanced {
     def apply[ U : URLSource ](
       jsonRpcUrls         : immutable.Iterable[U],
+      chainId             : Option[EthChainId]       = stub.Context.Default.ChainId,
       nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
-      reverseTld          : String                   = StandardNameServiceReverseTld,
       gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
       gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
       pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
@@ -112,6 +113,7 @@ object AsyncClient {
     ) = {
       val scontext = stub.Context.fromUrls(
         jsonRpcUrls         = jsonRpcUrls,
+        chainId             = chainId,
         gasPriceTweak       = gasPriceTweak,
         gasLimitTweak       = gasLimitTweak,
         pollPeriod          = pollPeriod,
@@ -121,13 +123,12 @@ object AsyncClient {
         transactionLogger   = transactionLogger,
         eventConfirmations  = eventConfirmations
       )( implicitly[URLSource[U]], efactory, poller, scheduler, econtext )
-      new AsyncClient( nameServiceAddress, reverseTld )( scontext )
+      new AsyncClient( nameServiceAddress )( scontext )
     }
   }
 }
 class AsyncClient(
-  val nameServiceAddress : EthAddress = StandardNameServiceAddress,
-  val reverseTld         : String     = StandardNameServiceReverseTld
+  val nameServiceAddress : EthAddress = StandardNameServiceAddress
 )( implicit scontext : stub.Context ) {
 
   implicit val econtext = scontext.icontext.econtext
@@ -136,11 +137,9 @@ class AsyncClient(
 
   private def stubnamehash( name : String ) : sol.Bytes32 = sol.Bytes32( namehash( name ).bytes )
 
-  private def _labelhash( str : String ) = componentHash( str )
+  private def stublabelhash( str : String ) = sol.Bytes32( labelhash( str ).bytes )
 
-  private def stublabelhash( str : String ) = sol.Bytes32( _labelhash( str ).bytes )
-
-  private def stublabelhash_uint( str : String ) = sol.UInt256( BigInt( 1, _labelhash( str ).toByteArray ) )
+  private def stublabelhash_uint( str : String ) = sol.UInt256( BigInt( 1, labelhash( str ).toByteArray ) )
 
   private def ethsigner[S : EthSigner.Source]( source : S ) : EthSigner  = implicitly[EthSigner.Source[S]].toEthSigner(source)
 
@@ -156,7 +155,7 @@ class AsyncClient(
   }
 
   private lazy val freverseRegistrar : Future[AsyncReverseRegistrar] = {
-    owner( reverseTld ) map { mbReverseRegistrarAddress =>
+    owner( StandardNameServiceReverseTld ) map { mbReverseRegistrarAddress =>
       new AsyncReverseRegistrar( mbReverseRegistrarAddress.get ) // we assert that it exists
     }
   }
@@ -244,43 +243,70 @@ class AsyncClient(
 
   final object forTopLevelDomain {
     // MT: access controlled by this' lock
-    private val tldToController : mutable.Map[String,forRegistrarManagedDomain] = mutable.Map.empty
+    private val tldToController : mutable.Map[String,RegistrarManagedDomain] = mutable.Map.empty
 
-    def apply( tld : String ) : forRegistrarManagedDomain = this.synchronized {
-      tldToController.getOrElseUpdate( tld, forRegistrarManagedDomain(tld) )
+    def apply( tld : String ) : RegistrarManagedDomain = this.synchronized {
+      tldToController.getOrElseUpdate( tld, RegistrarManagedDomain(tld) )
     }
   }
 
-  final object forRegistrarManagedDomain {
-    def apply( domain : String ) : forRegistrarManagedDomain =  new forRegistrarManagedDomain( domain )
+  final object RegistrarManagedDomain {
+    def apply( domain : String ) : RegistrarManagedDomain =  new RegistrarManagedDomain( domain )
   }
-  final class forRegistrarManagedDomain( domain : String ) {
+  final class RegistrarManagedDomain( val domain : String ) {
+    private lazy val _maybeDomainRegistrarAddress : Future[Option[EthAddress]] = owner( domain )
 
-    private lazy val fregistrar : Future[AsyncRegistrar] = {
-      owner( domain ) map { mbRegistrarAddress =>
-        new AsyncRegistrar( mbRegistrarAddress.get ) // we assert that it exists
+    private lazy val assertedDomainRegistrarAddress : Future[EthAddress] = {
+      _maybeDomainRegistrarAddress map {
+        case Some( address ) => address
+        case None            => throw new NoResolverSetException( domain )
       }
     }
 
-    private lazy val ftopLevelResolver : Future[AsyncResolver] = {
+    private lazy val domainRegistrar : Future[AsyncRegistrar] = {
+      for {
+        address <- assertedDomainRegistrarAddress
+        registrar = new AsyncRegistrar( address )
+        supports <- registrar.view.supportsInterface( InterfaceId.NftRegistrar )( Sender.Default )
+      }
+      yield {
+        if ( supports ) {
+          registrar
+        }
+        else {
+          throw new BadRegistrarException( s"Putative registrar at 0xs{address.hex} does not support the expected NFT / ENS Registrar interface ( 0x${InterfaceId.NftRegistrar.widen.hex} )." )
+        }
+      }
+    }
+
+    private lazy val domainResolver : Future[AsyncResolver] = {
       resolver( domain ).map( _.getOrElse( throw new NoResolverSetException( domain ) ) ).map { address =>
         new AsyncResolver( address )
       }
     }
 
-    private lazy val ftopLevelController : Future[AsyncController] = {
+    private lazy val domainController : Future[AsyncController] = {
       for {
-        topLevelResolver          <- ftopLevelResolver
-        topLevelControllerAddress <- topLevelResolver.view.interfaceImplementer( stubnamehash( domain ), ControllerInterfaceId )( Sender.Default )
+        topLevelResolver          <- domainResolver
+        topLevelControllerAddress <- topLevelResolver.view.interfaceImplementer( stubnamehash( domain ), InterfaceId.Controller )( Sender.Default )
       }
       yield {
-        new AsyncController( topLevelControllerAddress )
+        if ( topLevelControllerAddress != EthAddress.Zero ) {
+          new AsyncController( topLevelControllerAddress )
+        }
+        else {
+          throw new NoControllerSetException( domain )
+        }
       }
     }
 
+    lazy val maybeDomainRegistrarAddress : Future[Option[EthAddress]] = domainRegistrar.map( registrar => Some( registrar.address ) ).recover { case _ => None }
+
+    lazy val hasValidRegistrar : Future[Boolean] = maybeDomainRegistrarAddress.map( _.fold( false )( addr => true ) )
+
     def minCommitmentAgeInSeconds : Future[BigInt] = {
       for {
-        topLevelController        <- ftopLevelController
+        topLevelController        <- domainController
         minCommitmentAgeInSeconds <- topLevelController.view.minCommitmentAge()( Sender.Default )
       }
       yield {
@@ -290,7 +316,7 @@ class AsyncClient(
 
     def maxCommitmentAgeInSeconds : Future[BigInt] = {
       for {
-        topLevelController        <- ftopLevelController
+        topLevelController        <- domainController
         maxCommitmentAgeInSeconds <- topLevelController.view.maxCommitmentAge()( Sender.Default )
       }
       yield {
@@ -300,7 +326,7 @@ class AsyncClient(
 
     def minRegistrationDurationInSeconds : Future[BigInt] = {
       for {
-        topLevelController   <- ftopLevelController
+        topLevelController   <- domainController
         minDurationInSeconds <- topLevelController.view.MIN_REGISTRATION_DURATION()( Sender.Default )
       }
       yield {
@@ -311,7 +337,7 @@ class AsyncClient(
     def rentPriceInWei( name : String, durationInSeconds : BigInt ) : Future[BigInt] = {
       requireSimpleName( name )
       for {
-        topLevelController <- ftopLevelController
+        topLevelController <- domainController
         stubWei            <- topLevelController.view.rentPrice( name, sol.UInt( durationInSeconds ) )( Sender.Default )
       }
       yield {
@@ -322,7 +348,7 @@ class AsyncClient(
     def isValid( name : String ) : Future[Boolean] = {
       requireSimpleName( name )
       for {
-        topLevelController <- ftopLevelController
+        topLevelController <- domainController
         stubBool           <- topLevelController.view.valid( name )( Sender.Default )
       }
       yield {
@@ -333,7 +359,7 @@ class AsyncClient(
     def isAvailable( name : String ) : Future[Boolean] = {
       requireSimpleName( name )
       for {
-        topLevelController <- ftopLevelController
+        topLevelController <- domainController
         stubBool           <- topLevelController.view.available( name )( Sender.Default )
       }
       yield {
@@ -343,7 +369,7 @@ class AsyncClient(
 
     def nameExpires( name : String ) : Future[Instant] = {
       for {
-        registrar <- fregistrar
+        registrar <- domainRegistrar
         unixtime  <- registrar.view.nameExpires( stublabelhash_uint( name ) )( Sender.Default )
       }
       yield {
@@ -356,7 +382,7 @@ class AsyncClient(
 
       val secret = Commitment.newSecret()
       for {
-        topLevelController <- ftopLevelController
+        topLevelController <- domainController
         hash               <- topLevelController.view.makeCommitment( name, ethaddress(owner), secret )( Sender.Default )
       }
       yield {
@@ -366,7 +392,7 @@ class AsyncClient(
 
     def commit[S : EthSigner.Source]( signer : S, commitment : Commitment ) : Future[TransactionInfo.Async] = {
       for {
-        topLevelController <- ftopLevelController
+        topLevelController <- domainController
         txnInfo            <- topLevelController.txn.commit( sol.Bytes32(commitment.hash.bytes) )( ethsender( signer ) )
       }
       yield {
@@ -377,8 +403,19 @@ class AsyncClient(
     def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, commitment : Commitment, paymentInWei : BigInt ) : Future[TransactionInfo.Async] = {
       requireSimpleName( name )
       for {
-        topLevelController <- ftopLevelController
+        topLevelController <- domainController
         txnInfo            <- topLevelController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), commitment.secret, payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ) )( ethsender( signer ) )
+      }
+      yield {
+        txnInfo
+      }
+    }
+
+    def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, secret : Seq[Byte], paymentInWei : BigInt ) : Future[TransactionInfo.Async] = {
+      requireSimpleName( name )
+      for {
+        topLevelController <- domainController
+        txnInfo            <- topLevelController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), sol.Bytes32(secret), payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ) )( ethsender( signer ) )
       }
       yield {
         txnInfo
@@ -388,7 +425,7 @@ class AsyncClient(
     def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt ) : Future[TransactionInfo.Async] = {
       requireSimpleName( name )
       for {
-        topLevelController <- ftopLevelController
+        topLevelController <- domainController
         txnInfo            <- topLevelController.txn.renew( name, sol.UInt256(durationInSeconds) )( ethsender(signer) )
       }
       yield {

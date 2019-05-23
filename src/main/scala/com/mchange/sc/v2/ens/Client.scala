@@ -47,7 +47,7 @@ import scala.concurrent.{Await,ExecutionContext,Future}
 import scala.concurrent.duration._
 
 import com.mchange.sc.v1.consuela._
-import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash,EthPrivateKey,EthSigner,wallet}
+import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthChainId,EthHash,EthPrivateKey,EthSigner,wallet}
 import com.mchange.sc.v1.consuela.ethereum.jsonrpc
 
 import com.mchange.sc.v1.consuela.ethereum.stub
@@ -63,8 +63,8 @@ object Client {
 
   def apply[ U : URLSource ](
     jsonRpcUrl          : U,
+    chainId             : Option[EthChainId]       = stub.Context.Default.ChainId,
     nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
-    reverseTld          : String                   = StandardNameServiceReverseTld,
     gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
     gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
     pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
@@ -82,6 +82,7 @@ object Client {
   ) = {
     val scontext = stub.Context.fromUrl(
       jsonRpcUrl          = jsonRpcUrl,
+      chainId             = chainId,
       gasPriceTweak       = gasPriceTweak,
       gasLimitTweak       = gasLimitTweak,
       pollPeriod          = pollPeriod,
@@ -91,14 +92,14 @@ object Client {
       transactionLogger   = transactionLogger,
       eventConfirmations  = eventConfirmations
     )( implicitly[URLSource[U]], efactory, poller, scheduler, econtext )
-    new Client( nameServiceAddress, reverseTld, executionTimeout )( scontext )
+    new Client( nameServiceAddress, executionTimeout )( scontext )
   }
 
   final object LoadBalanced {
     def apply[ U : URLSource ](
       jsonRpcUrls         : immutable.Iterable[U],
+      chainId             : Option[EthChainId]       = stub.Context.Default.ChainId,
       nameServiceAddress  : EthAddress               = StandardNameServiceAddress,
-      reverseTld          : String                   = StandardNameServiceReverseTld,
       gasPriceTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasPriceTweak,
       gasLimitTweak       : stub.MarkupOrOverride    = stub.Context.Default.GasLimitTweak,
       pollPeriod          : Duration                 = stub.Context.Default.PollPeriod,
@@ -116,6 +117,7 @@ object Client {
     ) = {
       val scontext = stub.Context.fromUrls(
         jsonRpcUrls         = jsonRpcUrls,
+        chainId             = chainId,
         gasPriceTweak       = gasPriceTweak,
         gasLimitTweak       = gasLimitTweak,
         pollPeriod          = pollPeriod,
@@ -125,17 +127,16 @@ object Client {
         transactionLogger   = transactionLogger,
         eventConfirmations  = eventConfirmations
       )( implicitly[URLSource[U]], efactory, poller, scheduler, econtext )
-      new Client( nameServiceAddress, reverseTld, executionTimeout )( scontext )
+      new Client( nameServiceAddress, executionTimeout )( scontext )
     }
   }
 }
 class Client(
   val nameServiceAddress : EthAddress = StandardNameServiceAddress,
-  val reverseTld         : String     = StandardNameServiceReverseTld,
   val executionTimeout   : Duration   = Client.DefaultExecutionTimeout
 )( implicit scontext : stub.Context ) {
 
-  private val inner : AsyncClient = new AsyncClient( nameServiceAddress, reverseTld )( scontext )
+  private val inner : AsyncClient = new AsyncClient( nameServiceAddress )( scontext )
 
   private def await[T]( ft : Future[T] ) = Await.result( ft, executionTimeout )
 
@@ -169,17 +170,23 @@ class Client(
 
   final object forTopLevelDomain {
     // MT: access controlled by this' lock
-    private val tldToController : mutable.Map[String,forRegistrarManagedDomain] = mutable.Map.empty
+    private val tldToController : mutable.Map[String,RegistrarManagedDomain] = mutable.Map.empty
 
-    def apply( tld : String ) : forRegistrarManagedDomain = this.synchronized {
-      tldToController.getOrElseUpdate( tld, forRegistrarManagedDomain(tld) )
+    def apply( tld : String ) : RegistrarManagedDomain = this.synchronized {
+      tldToController.getOrElseUpdate( tld, RegistrarManagedDomain(tld) )
     }
   }
 
-  final object forRegistrarManagedDomain {
-    def apply( domain : String ) : forRegistrarManagedDomain =  new forRegistrarManagedDomain( inner.forRegistrarManagedDomain( domain ) )
+  final object RegistrarManagedDomain {
+    def apply( domain : String ) : RegistrarManagedDomain =  new RegistrarManagedDomain( inner.RegistrarManagedDomain( domain ) )
   }
-  final class forRegistrarManagedDomain( _inner : inner.forRegistrarManagedDomain ) {
+  final class RegistrarManagedDomain( _inner : inner.RegistrarManagedDomain ) {
+
+    def domain : String = _inner.domain
+
+    def maybeDomainRegistrarAddress : Option[EthAddress] = await( _inner.maybeDomainRegistrarAddress )
+
+    def hasValidRegistrar : Boolean = await( _inner.hasValidRegistrar )
 
     def minCommitmentAgeInSeconds : BigInt = await( _inner.minCommitmentAgeInSeconds )
 
@@ -201,6 +208,10 @@ class Client(
 
     def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, commitment : Commitment, paymentInWei : BigInt ) : TransactionInfo = {
       awaitTransactionInfo( _inner.register( signer, name, owner, durationInSeconds, commitment, paymentInWei ) )
+    }
+
+    def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, secret : Seq[Byte], paymentInWei : BigInt ) : TransactionInfo = {
+      awaitTransactionInfo( _inner.register( signer, name, owner, durationInSeconds, secret, paymentInWei ) )
     }
 
     def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt ) : TransactionInfo = {
