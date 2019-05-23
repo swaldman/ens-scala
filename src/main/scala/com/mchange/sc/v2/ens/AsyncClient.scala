@@ -300,9 +300,14 @@ class AsyncClient(
       }
     }
 
-    lazy val maybeDomainRegistrarAddress : Future[Option[EthAddress]] = domainRegistrar.map( registrar => Some( registrar.address ) ).recover { case _ => None }
+    lazy val maybeDomainRegistrarAddress : Future[Either[Throwable,EthAddress]] = domainRegistrar.map( registrar => Right( registrar.address ) ).recover { case problem => Left(problem) }
 
-    lazy val hasValidRegistrar : Future[Boolean] = maybeDomainRegistrarAddress.map( _.fold( false )( addr => true ) )
+    lazy val hasValidRegistrar : Future[Boolean] = {
+      maybeDomainRegistrarAddress.map {
+        case _ : Left[Throwable,EthAddress]  => false
+        case _ : Right[Throwable,EthAddress] => true
+      }
+    }
 
     def minCommitmentAgeInSeconds : Future[BigInt] = {
       for {

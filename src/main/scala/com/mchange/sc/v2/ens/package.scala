@@ -73,7 +73,7 @@ package object ens extends Denominations {
 
   private val NullHash = EthHash.withBytes( Array.fill[Byte](32)(0.toByte) )
 
-  private def tokenizeReverse( name : String ) : List[String] = {
+  private [ens] def tokenizeReverse( name : String ) : List[String] = {
     val arr = if ( name.length == 0 ) Array.empty[String] else name.split("""\.""")
     val len = arr.length
 
@@ -87,7 +87,7 @@ package object ens extends Denominations {
 
     build(0, Nil)
   }
-  def toBytes( nameComponent : String ) = IDN.toASCII( nameComponent.toLowerCase( Locale.US ), IDN.USE_STD3_ASCII_RULES ).getBytes( US_ASCII )
+  private def toBytes( nameComponent : String ) = IDN.toASCII( nameComponent.toLowerCase( Locale.US ), IDN.USE_STD3_ASCII_RULES ).getBytes( US_ASCII )
 
   def componentHash( component : String ) : EthHash = EthHash.hash( toBytes( component ) )
 
@@ -98,7 +98,7 @@ package object ens extends Denominations {
     namehashReverseComponents( reverseComponents )
   }
 
-  private def namehashReverseComponents( reverseComponents : List[String] ) : EthHash = {
+  private [ens] def namehashReverseComponents( reverseComponents : List[String] ) : EthHash = {
     reverseComponents.foldLeft( NullHash ) { ( last, next ) =>
       EthHash.hash( last.bytes ++ componentHash( next ).bytes )
     }
@@ -133,73 +133,5 @@ package object ens extends Denominations {
     }
   }
   final case class Commitment( hash : EthHash, secret : sol.Bytes32 )
-
-  final object ParsedPath {
-    case class Subnode private [ParsedPath] ( componentsReversed : List[String] ) extends HasBaseName {
-      assert( componentsReversed.length >= 3, s"Subnodes should have three or more components, but found ${componentsReversed}." )
-
-      lazy val subnode : String = componentsReversed.drop(2).reverse.mkString(".")
-    }
-    case class BaseNameTld private [ParsedPath] ( componentsReversed : List[String] ) extends HasBaseName {
-      assert( componentsReversed.length == 2, s"BaseNameTlds should have two components, but found ${componentsReversed}." )
-    }
-    case class Tld private [ParsedPath] ( componentsReversed : List[String] ) extends Forward {
-      assert( componentsReversed.length == 1, s"Forward Tlds should have just one component, but found ${componentsReversed}." )
-    }
-    case class Reverse private [ParsedPath] ( componentsReversed : List[String] ) extends ParsedPath {
-      assert( componentsReversed.length == 3 && componentsReversed.take(2) == "reverse" :: "addr" :: Nil, s"Unexpected reverse namespace! [componentsReversed: ${componentsReversed}]" )
-
-      lazy val address = EthAddress( componentsReversed.last )
-    }
-    sealed trait HasBaseName extends Forward {
-      lazy val baseName : String = componentsReversed.tail.head
-      lazy val parent : ParsedPath.Forward = ParsedPath.Forward( components.tail.reverse )
-      lazy val label : String = components.head
-
-      def baseNameTld : Tuple2[String,String] = ( baseName, tld )
-    }
-    final object Forward {
-      def apply( path : String ) : ParsedPath.Forward = {
-        val componentsReversed = tokenizeReverse( path )
-        this.apply( componentsReversed )
-      }
-      def apply( componentsReversed : List[String] ) : ParsedPath.Forward = {
-        componentsReversed.length match {
-          case 0 => throw new BadEnsPathException( s"Empty path is not a valid forward ENS name." )
-          case 1 => Tld( componentsReversed )
-          case 2 => BaseNameTld( componentsReversed )
-          case _ => Subnode( componentsReversed )
-        }
-      }
-    }
-    sealed trait Forward extends ParsedPath {
-      lazy val topLevelDomain : String = componentsReversed.head
-      def tld : String = this.topLevelDomain
-    }
-    def apply( path : String ) : ParsedPath = {
-      val componentsReversed = tokenizeReverse( path )
-      this.apply( componentsReversed )
-    }
-    def apply( componentsReversed : List[String] ) : ParsedPath = {
-      componentsReversed match {
-        case Nil                      => throw new BadEnsPathException( s"Empty path is not a valid ENS name." )
-        case "reverse" :: "addr" :: _ => Reverse( componentsReversed )
-        case _                        => Forward( componentsReversed )
-      }
-    }
-  }
-  sealed trait ParsedPath {
-    def componentsReversed : List[String]
-
-    lazy val components = componentsReversed.reverse
-
-    lazy val fullPath = components.mkString(".")
-
-    def fullName = fullPath
-
-    lazy val namehash = namehashReverseComponents( componentsReversed )
-
-    override def toString = super.toString() + s"[fullPath=${fullPath}]"
-  }
 }
 

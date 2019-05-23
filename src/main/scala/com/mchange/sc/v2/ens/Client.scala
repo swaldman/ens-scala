@@ -184,7 +184,7 @@ class Client(
 
     def domain : String = _inner.domain
 
-    def maybeDomainRegistrarAddress : Option[EthAddress] = await( _inner.maybeDomainRegistrarAddress )
+    def maybeDomainRegistrarAddress : Either[Throwable,EthAddress] = await( _inner.maybeDomainRegistrarAddress )
 
     def hasValidRegistrar : Boolean = await( _inner.hasValidRegistrar )
 
