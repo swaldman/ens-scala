@@ -204,18 +204,56 @@ class Client(
 
     def makeCommitment[T : EthAddress.Source]( name : String, owner : T ) : Commitment = await( _inner.makeCommitment( name, owner ) )
 
-    def commit[S : EthSigner.Source]( signer : S, commitment : Commitment ) : TransactionInfo = awaitTransactionInfo( _inner.commit( signer, commitment ) )
+    def commit[S : EthSigner.Source]( signer : S, commitment : Commitment, forceNonce : Option[BigInt] = None ) : TransactionInfo = awaitTransactionInfo( _inner.commit( signer, commitment, forceNonce ) )
 
-    def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, commitment : Commitment, paymentInWei : BigInt ) : TransactionInfo = {
+    def register[S : EthSigner.Source, T : EthAddress.Source](
+      signer : S,
+      name : String,
+      owner : T,
+      durationInSeconds : BigInt,
+      commitment : Commitment,
+      paymentInWei : BigInt,
+      forceNonce : Option[BigInt]
+    ) : TransactionInfo = {
+      awaitTransactionInfo( _inner.register( signer, name, owner, durationInSeconds, commitment, paymentInWei, forceNonce ) )
+    }
+
+    def register[S : EthSigner.Source, T : EthAddress.Source](
+      signer : S,
+      name : String,
+      owner : T,
+      durationInSeconds : BigInt,
+      commitment : Commitment,
+      paymentInWei : BigInt
+    ) : TransactionInfo = {
       awaitTransactionInfo( _inner.register( signer, name, owner, durationInSeconds, commitment, paymentInWei ) )
     }
 
-    def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, secret : Seq[Byte], paymentInWei : BigInt ) : TransactionInfo = {
+    def register[S : EthSigner.Source, T : EthAddress.Source](
+      signer : S,
+      name : String,
+      owner : T,
+      durationInSeconds : BigInt,
+      secret : Seq[Byte],
+      paymentInWei : BigInt,
+      forceNonce : Option[BigInt]
+    ) : TransactionInfo = {
+      awaitTransactionInfo( _inner.register( signer, name, owner, durationInSeconds, secret, paymentInWei, forceNonce ) )
+    }
+
+    def register[S : EthSigner.Source, T : EthAddress.Source](
+      signer : S,
+      name : String,
+      owner : T,
+      durationInSeconds : BigInt,
+      secret : Seq[Byte],
+      paymentInWei : BigInt
+    ) : TransactionInfo = {
       awaitTransactionInfo( _inner.register( signer, name, owner, durationInSeconds, secret, paymentInWei ) )
     }
 
-    def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt ) : TransactionInfo = {
-      awaitTransactionInfo( _inner.renew( signer, name, durationInSeconds ) )
+    def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt, paymentInWei : BigInt, forceNonce : Option[BigInt] = None ) : TransactionInfo = {
+      awaitTransactionInfo( _inner.renew( signer, name, durationInSeconds, paymentInWei, forceNonce ) )
     }
   }
 }

@@ -395,43 +395,82 @@ class AsyncClient(
       }
     }
 
-    def commit[S : EthSigner.Source]( signer : S, commitment : Commitment ) : Future[TransactionInfo.Async] = {
+    def commit[S : EthSigner.Source]( signer : S, commitment : Commitment, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
       for {
         topLevelController <- domainController
-        txnInfo            <- topLevelController.txn.commit( sol.Bytes32(commitment.hash.bytes) )( ethsender( signer ) )
+        txnInfo            <- topLevelController.txn.commit( sol.Bytes32(commitment.hash.bytes), nonce = toStubNonce( forceNonce ) )( ethsender( signer ) )
       }
       yield {
         txnInfo
       }
     }
 
-    def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, commitment : Commitment, paymentInWei : BigInt ) : Future[TransactionInfo.Async] = {
+    def register[S : EthSigner.Source, T : EthAddress.Source](
+      signer            : S,
+      name              : String,
+      owner             : T,
+      durationInSeconds : BigInt,
+      commitment        : Commitment,
+      paymentInWei      : BigInt,
+      forceNonce        : Option[BigInt]
+    ) : Future[TransactionInfo.Async] = {
       requireSimpleName( name )
       for {
         topLevelController <- domainController
-        txnInfo            <- topLevelController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), commitment.secret, payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ) )( ethsender( signer ) )
+        txnInfo            <- topLevelController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), commitment.secret, payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ), nonce = toStubNonce( forceNonce ) )( ethsender( signer ) )
       }
       yield {
         txnInfo
       }
     }
 
-    def register[S : EthSigner.Source, T : EthAddress.Source]( signer : S, name : String, owner : T, durationInSeconds : BigInt, secret : Seq[Byte], paymentInWei : BigInt ) : Future[TransactionInfo.Async] = {
+    def register[S : EthSigner.Source, T : EthAddress.Source](
+      signer            : S,
+      name              : String,
+      owner             : T,
+      durationInSeconds : BigInt,
+      commitment        : Commitment,
+      paymentInWei      : BigInt
+    ) : Future[TransactionInfo.Async] = {
+      register( signer, name, owner, durationInSeconds, commitment, paymentInWei, None )
+    }
+
+    def register[S : EthSigner.Source, T : EthAddress.Source](
+      signer            : S,
+      name              : String,
+      owner             : T,
+      durationInSeconds : BigInt,
+      secret            : Seq[Byte],
+      paymentInWei      : BigInt,
+      forceNonce        : Option[BigInt]
+    ) : Future[TransactionInfo.Async] = {
       requireSimpleName( name )
       for {
         topLevelController <- domainController
-        txnInfo            <- topLevelController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), sol.Bytes32(secret), payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ) )( ethsender( signer ) )
+        txnInfo            <- topLevelController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), sol.Bytes32(secret), payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ), nonce = toStubNonce( forceNonce ) )( ethsender( signer ) )
       }
       yield {
         txnInfo
       }
     }
 
-    def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt ) : Future[TransactionInfo.Async] = {
+    def register[S : EthSigner.Source, T : EthAddress.Source](
+      signer            : S,
+      name              : String,
+      owner             : T,
+      durationInSeconds : BigInt,
+      secret            : Seq[Byte],
+      paymentInWei      : BigInt
+    ) : Future[TransactionInfo.Async] = {
+      register( signer, name, owner, durationInSeconds, secret, paymentInWei, None )
+    }
+    
+
+    def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt, paymentInWei : BigInt, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
       requireSimpleName( name )
       for {
         topLevelController <- domainController
-        txnInfo            <- topLevelController.txn.renew( name, sol.UInt256(durationInSeconds) )( ethsender(signer) )
+        txnInfo            <- topLevelController.txn.renew( name, sol.UInt256(durationInSeconds), payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ), nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
       }
       yield {
         txnInfo
