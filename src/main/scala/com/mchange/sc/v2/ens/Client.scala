@@ -200,7 +200,7 @@ class Client(
 
     def isAvailable( name : String ) : Boolean = await( _inner.isAvailable( name ) )
 
-    def nameExpires( name : String ) : Instant = await( _inner.nameExpires( name ) )
+    def nameExpires( name : String ) : Option[Instant] = await( _inner.nameExpires( name ) )
 
     def makeCommitment[T : EthAddress.Source]( name : String, owner : T ) : Commitment = await( _inner.makeCommitment( name, owner ) )
 
@@ -254,6 +254,10 @@ class Client(
 
     def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt, paymentInWei : BigInt, forceNonce : Option[BigInt] = None ) : TransactionInfo = {
       awaitTransactionInfo( _inner.renew( signer, name, durationInSeconds, paymentInWei, forceNonce ) )
+    }
+
+    def migrateFromPredecessor[S : EthSigner.Source]( signer : S, name : String, forceNonce : Option[BigInt] = None ) : TransactionInfo = {
+      awaitTransactionInfo( _inner.migrateFromPredecessor( signer, name, forceNonce ) )
     }
   }
 }

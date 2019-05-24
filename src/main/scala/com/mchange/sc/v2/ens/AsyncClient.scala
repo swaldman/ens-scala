@@ -279,6 +279,21 @@ class AsyncClient(
       }
     }
 
+    private lazy val migratablePredecessorRegistrar : Future[AsyncMigratableLegacyRegistrar] = {
+      for {
+        topLevelResolver   <- domainResolver
+        predecessorAddress <- topLevelResolver.view.interfaceImplementer( stubnamehash( domain ), InterfaceId.MigratableLegacyRegistrar )( Sender.Default )
+      }
+      yield {
+        if ( predecessorAddress != EthAddress.Zero ) {
+          new AsyncMigratableLegacyRegistrar( predecessorAddress )
+        }
+        else {
+          throw new EnsException( s"There is no predecessor registry available for '${domain}' (looked up in current resolver with address '0x${topLevelResolver.address.hex}')." )
+        }
+      }
+    }
+
     private lazy val domainResolver : Future[AsyncResolver] = {
       resolver( domain ).map( _.getOrElse( throw new NoResolverSetException( domain ) ) ).map { address =>
         new AsyncResolver( address )
@@ -372,13 +387,19 @@ class AsyncClient(
       }
     }
 
-    def nameExpires( name : String ) : Future[Instant] = {
+    def nameExpires( name : String ) : Future[Option[Instant]] = {
       for {
         registrar <- domainRegistrar
         unixtime  <- registrar.view.nameExpires( stublabelhash_uint( name ) )( Sender.Default )
       }
       yield {
-        Instant.ofEpochSecond( unixtime.widen.toLong )
+        val epochSecond = unixtime.widen.toLong
+        if ( epochSecond != 0 ) {
+          Some( Instant.ofEpochSecond( epochSecond ) )
+        }
+        else {
+          None
+        }
       }
     }
 
@@ -471,6 +492,16 @@ class AsyncClient(
       for {
         topLevelController <- domainController
         txnInfo            <- topLevelController.txn.renew( name, sol.UInt256(durationInSeconds), payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ), nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
+      }
+      yield {
+        txnInfo
+      }
+    }
+
+    def migrateFromPredecessor[S : EthSigner.Source]( signer : S, name : String, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
+      for {
+        predecessor <- migratablePredecessorRegistrar
+        txnInfo     <- predecessor.txn.transferRegistrars( stublabelhash(name), nonce = toStubNonce( forceNonce ) )( ethsender( signer ) )
       }
       yield {
         txnInfo

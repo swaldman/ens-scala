@@ -1,0 +1,12 @@
+[ {
+  "outputs" : [ ],
+  "constant" : false,
+  "payable" : false,
+  "inputs" : [ {
+    "name" : "_hash",
+    "type" : "bytes32"
+  } ],
+  "name" : "transferRegistrars",
+  "stateMutability" : "nonpayable",
+  "type" : "function"
+} ]
