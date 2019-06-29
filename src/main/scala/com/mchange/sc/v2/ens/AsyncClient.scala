@@ -281,15 +281,15 @@ class AsyncClient(
 
     private lazy val migratablePredecessorRegistrar : Future[AsyncMigratableLegacyRegistrar] = {
       for {
-        topLevelResolver   <- domainResolver
-        predecessorAddress <- topLevelResolver.view.interfaceImplementer( stubnamehash( domain ), InterfaceId.MigratableLegacyRegistrar )( Sender.Default )
+        dResolver          <- domainResolver
+        predecessorAddress <- dResolver.view.interfaceImplementer( stubnamehash( domain ), InterfaceId.MigratableLegacyRegistrar )( Sender.Default )
       }
       yield {
         if ( predecessorAddress != EthAddress.Zero ) {
           new AsyncMigratableLegacyRegistrar( predecessorAddress )
         }
         else {
-          throw new EnsException( s"There is no predecessor registry available for '${domain}' (looked up in current resolver with address '0x${topLevelResolver.address.hex}')." )
+          throw new EnsException( s"There is no predecessor registry available for '${domain}' (looked up in current resolver with address '0x${dResolver.address.hex}')." )
         }
       }
     }
@@ -302,12 +302,12 @@ class AsyncClient(
 
     private lazy val domainController : Future[AsyncController] = {
       for {
-        topLevelResolver          <- domainResolver
-        topLevelControllerAddress <- topLevelResolver.view.interfaceImplementer( stubnamehash( domain ), InterfaceId.Controller )( Sender.Default )
+        dResolver          <- domainResolver
+        dControllerAddress <- dResolver.view.interfaceImplementer( stubnamehash( domain ), InterfaceId.Controller )( Sender.Default )
       }
       yield {
-        if ( topLevelControllerAddress != EthAddress.Zero ) {
-          new AsyncController( topLevelControllerAddress )
+        if ( dControllerAddress != EthAddress.Zero ) {
+          new AsyncController( dControllerAddress )
         }
         else {
           throw new NoControllerSetException( domain )
@@ -326,8 +326,8 @@ class AsyncClient(
 
     def minCommitmentAgeInSeconds : Future[BigInt] = {
       for {
-        topLevelController        <- domainController
-        minCommitmentAgeInSeconds <- topLevelController.view.minCommitmentAge()( Sender.Default )
+        dController               <- domainController
+        minCommitmentAgeInSeconds <- dController.view.minCommitmentAge()( Sender.Default )
       }
       yield {
         minCommitmentAgeInSeconds.widen
@@ -336,8 +336,8 @@ class AsyncClient(
 
     def maxCommitmentAgeInSeconds : Future[BigInt] = {
       for {
-        topLevelController        <- domainController
-        maxCommitmentAgeInSeconds <- topLevelController.view.maxCommitmentAge()( Sender.Default )
+        dController               <- domainController
+        maxCommitmentAgeInSeconds <- dController.view.maxCommitmentAge()( Sender.Default )
       }
       yield {
         maxCommitmentAgeInSeconds.widen
@@ -346,8 +346,8 @@ class AsyncClient(
 
     def minRegistrationDurationInSeconds : Future[BigInt] = {
       for {
-        topLevelController   <- domainController
-        minDurationInSeconds <- topLevelController.view.MIN_REGISTRATION_DURATION()( Sender.Default )
+        dController          <- domainController
+        minDurationInSeconds <- dController.view.MIN_REGISTRATION_DURATION()( Sender.Default )
       }
       yield {
         minDurationInSeconds.widen
@@ -357,8 +357,8 @@ class AsyncClient(
     def rentPriceInWei( name : String, durationInSeconds : BigInt ) : Future[BigInt] = {
       requireSimpleName( name )
       for {
-        topLevelController <- domainController
-        stubWei            <- topLevelController.view.rentPrice( name, sol.UInt( durationInSeconds ) )( Sender.Default )
+        dController <- domainController
+        stubWei     <- dController.view.rentPrice( name, sol.UInt( durationInSeconds ) )( Sender.Default )
       }
       yield {
         stubWei.widen
@@ -368,8 +368,8 @@ class AsyncClient(
     def isValid( name : String ) : Future[Boolean] = {
       requireSimpleName( name )
       for {
-        topLevelController <- domainController
-        stubBool           <- topLevelController.view.valid( name )( Sender.Default )
+        dController <- domainController
+        stubBool    <- dController.view.valid( name )( Sender.Default )
       }
       yield {
         stubBool
@@ -379,8 +379,8 @@ class AsyncClient(
     def isAvailable( name : String ) : Future[Boolean] = {
       requireSimpleName( name )
       for {
-        topLevelController <- domainController
-        stubBool           <- topLevelController.view.available( name )( Sender.Default )
+        dController <- domainController
+        stubBool    <- dController.view.available( name )( Sender.Default )
       }
       yield {
         stubBool
@@ -408,8 +408,8 @@ class AsyncClient(
 
       val secret = Commitment.newSecret()
       for {
-        topLevelController <- domainController
-        hash               <- topLevelController.view.makeCommitment( name, ethaddress(owner), secret )( Sender.Default )
+        dController <- domainController
+        hash        <- dController.view.makeCommitment( name, ethaddress(owner), secret )( Sender.Default )
       }
       yield {
         Commitment( EthHash.withBytes(hash.widen), secret )
@@ -418,8 +418,8 @@ class AsyncClient(
 
     def commit[S : EthSigner.Source]( signer : S, commitment : Commitment, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
       for {
-        topLevelController <- domainController
-        txnInfo            <- topLevelController.txn.commit( sol.Bytes32(commitment.hash.bytes), nonce = toStubNonce( forceNonce ) )( ethsender( signer ) )
+        dController <- domainController
+        txnInfo     <- dController.txn.commit( sol.Bytes32(commitment.hash.bytes), nonce = toStubNonce( forceNonce ) )( ethsender( signer ) )
       }
       yield {
         txnInfo
@@ -437,8 +437,8 @@ class AsyncClient(
     ) : Future[TransactionInfo.Async] = {
       requireSimpleName( name )
       for {
-        topLevelController <- domainController
-        txnInfo            <- topLevelController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), commitment.secret, payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ), nonce = toStubNonce( forceNonce ) )( ethsender( signer ) )
+        dController <- domainController
+        txnInfo     <- dController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), commitment.secret, payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ), nonce = toStubNonce( forceNonce ) )( ethsender( signer ) )
       }
       yield {
         txnInfo
@@ -467,8 +467,8 @@ class AsyncClient(
     ) : Future[TransactionInfo.Async] = {
       requireSimpleName( name )
       for {
-        topLevelController <- domainController
-        txnInfo            <- topLevelController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), sol.Bytes32(secret), payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ), nonce = toStubNonce( forceNonce ) )( ethsender( signer ) )
+        dController <- domainController
+        txnInfo     <- dController.txn.register( name, ethaddress(owner), sol.UInt256(durationInSeconds), sol.Bytes32(secret), payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ), nonce = toStubNonce( forceNonce ) )( ethsender( signer ) )
       }
       yield {
         txnInfo
@@ -490,8 +490,8 @@ class AsyncClient(
     def renew[S : EthSigner.Source]( signer : S, name : String, durationInSeconds : BigInt, paymentInWei : BigInt, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
       requireSimpleName( name )
       for {
-        topLevelController <- domainController
-        txnInfo            <- topLevelController.txn.renew( name, sol.UInt256(durationInSeconds), payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ), nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
+        dController <- domainController
+        txnInfo     <- dController.txn.renew( name, sol.UInt256(durationInSeconds), payment = stub.Payment.ofWei( sol.UInt256( paymentInWei ) ), nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
       }
       yield {
         txnInfo
