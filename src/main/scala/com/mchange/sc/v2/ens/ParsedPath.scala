@@ -1,6 +1,7 @@
 package com.mchange.sc.v2.ens
 
-import com.mchange.sc.v1.consuela.ethereum.EthAddress
+import com.mchange.sc.v2.ens
+import com.mchange.sc.v1.consuela.ethereum.{EthAddress,EthHash}
 
 // XXX: Not very DRY about "reverse" :: "addr" <=> "addr.reverse"
 final object ParsedPath {
@@ -27,6 +28,7 @@ final object ParsedPath {
     lazy val baseName : String = componentsReversed.tail.head
     lazy val parent : ParsedPath.Forward = ParsedPath.Forward( components.tail.reverse )
     lazy val label : String = components.head
+    lazy val labelhash : EthHash = ens.labelhash( label ) 
 
     def baseNameTld : Tuple2[String,String] = ( baseName, tld )
   }
@@ -74,7 +76,7 @@ sealed trait ParsedPath {
 
   def fullName = fullPath
 
-  lazy val namehash = namehashReverseComponents( componentsReversed )
+  lazy val namehash : EthHash = namehashReverseComponents( componentsReversed )
 
   override def toString = super.toString() + s"[fullPath=${fullPath}]"
 }
