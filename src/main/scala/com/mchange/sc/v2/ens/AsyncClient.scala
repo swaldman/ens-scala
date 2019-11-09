@@ -126,6 +126,8 @@ object AsyncClient {
       new AsyncClient( nameServiceAddress )( scontext )
     }
   }
+
+  private val UnitFuture = Future.successful( () )
 }
 class AsyncClient(
   val nameServiceAddress : EthAddress = StandardNameServiceAddress
@@ -211,14 +213,21 @@ class AsyncClient(
   def setResolver[S : EthSigner.Source, T : EthAddress.Source]( signer : S, path : String, resolver : T, forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = onlyOwner( signer, path ) {
     nameService.txn.setResolver( stubnamehash( path ), ethaddress( resolver ), nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
   }
-  
-  private def withResolver[T]( path : String )( op : ( sol.Bytes32, AsyncResolver ) => Future[T] ) : Future[T] = {
+
+  private def withResolver[T]( path : String, requiredInterfaces : Seq[sol.Bytes4] = Seq.empty )( op : ( sol.Bytes32, AsyncResolver ) => Future[T] ) : Future[T] = {
     val stubnodehash = stubnamehash( path )
     val fmbResolver : Future[Option[EthAddress]] = _resolver( stubnodehash )
     fmbResolver flatMap { mbResolver =>
       val mbFut = mbResolver map { resolverAddr =>
         val resolver = new AsyncResolver( resolverAddr )
-        op( stubnodehash, resolver )
+        val checkInterfaces = {
+          def checkInterface( id : sol.Bytes4 ) = {
+            import AsyncClient.UnitFuture
+            resolver.view.supportsInterface( id )( Sender.Default ).flatMap( supports => if (supports) UnitFuture else Future.failed( new UnsupportedInterfaceException( id ) ) )
+          }
+          Future.sequence( requiredInterfaces.map( checkInterface ) )
+        }
+        checkInterfaces.flatMap( _ =>  op( stubnodehash, resolver ) )
       }
       mbFut match {
         case None        => Future.failed( new NoResolverSetException( path ) )
@@ -226,6 +235,20 @@ class AsyncClient(
       }
     }
   }
+
+  def multicoinAddress( path : String, slip44CoinIndex : Int ) : Future[Option[immutable.Seq[Byte]]] = {
+    withResolver( path, Seq( InterfaceId.MulticoinAddresses ) ){ ( stubnodehash, resolver ) =>
+      val fAddr = resolver.view.addr( stubnodehash, sol.UInt256(slip44CoinIndex) )( Sender.Default )
+      fAddr.map( addr => if ( addr.length == 0 ) None else Some( addr ) )
+    } recover { case e : NoResolverSetException => None }
+  }
+
+  def setMulticoinAddress[S : EthSigner.Source]( signer : S, path : String, slip44CoinIndex : Int, address : immutable.Seq[Byte], forceNonce : Option[BigInt] = None ) : Future[TransactionInfo.Async] = {
+    withResolver( path, Seq( InterfaceId.MulticoinAddresses ) ){ ( stubnodehash, resolver ) =>
+      resolver.txn.setAddr( stubnodehash, sol.UInt256(slip44CoinIndex), address, nonce = toStubNonce( forceNonce ) )( ethsender(signer) )
+    }
+  }
+  
 
   def address( path : String ) : Future[Option[EthAddress]] = {
     withResolver( path ){ ( stubnodehash, resolver ) =>

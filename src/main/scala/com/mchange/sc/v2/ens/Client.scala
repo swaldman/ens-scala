@@ -168,6 +168,14 @@ class Client(
     awaitTransactionInfo( inner.setAddress( signer, name, address, forceNonce = forceNonce ) )
   }
 
+  def multicoinAddress( name : String, slip44CoinIndex : Int ) : Option[immutable.Seq[Byte]] = await( inner.multicoinAddress( name, slip44CoinIndex ) )
+
+  def setMulticoinAddress[S : EthSigner.Source]( signer : S, name : String, slip44CoinIndex : Int, address : immutable.Seq[Byte], forceNonce : Option[BigInt] = None ) : TransactionInfo = {
+    awaitTransactionInfo( inner.setMulticoinAddress( signer, name, slip44CoinIndex, address, forceNonce = forceNonce ) )
+  }
+
+  
+
   final object forTopLevelDomain {
     // MT: access controlled by this' lock
     private val tldToController : mutable.Map[String,RegistrarManagedDomain] = mutable.Map.empty

@@ -60,6 +60,11 @@ package object ens extends Denominations {
   class MustBeOwnedException( name : String ) extends EnsException( s"Only the owner of name '${name}' can call this function, but '${name}' has no owner." )
   class BadEnsPathException( message : String, cause : Throwable = null ) extends EnsException( message, cause )
   class BadRegistrarException( message : String, cause : Throwable = null ) extends EnsException( message, cause )
+  class UnsupportedInterfaceException( message : String, cause : Throwable ) extends EnsException( message, cause ) {
+    def this( id : sol.Bytes4, cause : Throwable = null )  = {
+      this( s"""Interface ${InterfaceId.Description.getOrElse(id, "<no-description>")} with identifier '0x${id.widen.hex}' is required but not supported""", cause )
+    }
+  }
 
   // bring these into the ens package for convenience
   val  MarkupOrOverride = Invoker.MarkupOrOverride
@@ -119,8 +124,16 @@ package object ens extends Denominations {
 
   final object InterfaceId {
     val Controller                = sol.Bytes4("0x018fac06".decodeHex)
-    val NftRegistrar              = sol.Bytes4("0x6ccb2df4".decodeHex)
     val MigratableLegacyRegistrar = sol.Bytes4("0x7ba18ba1".decodeHex)
+    val MulticoinAddresses        = sol.Bytes4("0xf1cb7e06".decodeHex)
+    val NftRegistrar              = sol.Bytes4("0x6ccb2df4".decodeHex)
+
+    val Description = Map (
+      Controller                -> "Controller",
+      MigratableLegacyRegistrar -> "MigratableLegacyRegistrar",
+      MulticoinAddresses        -> "MulticoinAddresses",
+      NftRegistrar              -> "NftRegistrar"
+    )
   }
 
   final object Commitment {
