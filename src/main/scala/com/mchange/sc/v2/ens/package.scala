@@ -125,13 +125,13 @@ package object ens extends Denominations {
   final object InterfaceId {
     val Controller                = sol.Bytes4("0x018fac06".decodeHex)
     val MigratableLegacyRegistrar = sol.Bytes4("0x7ba18ba1".decodeHex)
-    val MulticoinAddresses        = sol.Bytes4("0xf1cb7e06".decodeHex)
+    val MultichainAddresses       = sol.Bytes4("0xf1cb7e06".decodeHex)
     val NftRegistrar              = sol.Bytes4("0x6ccb2df4".decodeHex)
 
     val Description = Map (
       Controller                -> "Controller",
       MigratableLegacyRegistrar -> "MigratableLegacyRegistrar",
-      MulticoinAddresses        -> "MulticoinAddresses",
+      MultichainAddresses       -> "MultichainAddresses",
       NftRegistrar              -> "NftRegistrar"
     )
   }

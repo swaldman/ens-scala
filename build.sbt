@@ -48,7 +48,7 @@ sourceDirectory in Preprocess := tutTargetDirectory.value
 
 // make sure preprocess happens before hugo then let the hugo take file from preprocessor output
 
-baseURL in Hugo := uri(s"http://www.mchange.com/projects/${name.value}/")
+baseURL in Hugo := uri(s"https://www.mchange.com/projects/${name.value}/")
 mappings in Hugo := { ( ( mappings in Hugo ) dependsOn ( mappings in Preprocess ) ).value }
 sourceDirectory in Hugo := (target in Preprocess).value
 target in Hugo := target.value / "hugo"
