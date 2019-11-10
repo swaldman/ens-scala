@@ -2,7 +2,7 @@ name := "ens-scala"
 
 organization := "com.mchange"
 
-version := "0.2.2-SNAPSHOT"
+version := "0.2.2"
 
 scalaVersion := "2.12.10"
 
