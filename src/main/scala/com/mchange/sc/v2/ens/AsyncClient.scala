@@ -426,10 +426,16 @@ class AsyncClient(
       }
     }
 
-    def makeCommitment[T : EthAddress.Source]( name : String, owner : T ) : Future[Commitment] = {
+    def makeCommitment[T : EthAddress.Source]( name : String, owner : T, mbSecret : Option[immutable.Seq[Byte]] = None ) : Future[Commitment] = {
       requireSimpleName( name )
+      require( mbSecret.isEmpty || mbSecret.get.length == 32, "Secrets must be precisely 32 bytes long." )
 
-      val secret = Commitment.newSecret()
+      val secret = {
+        mbSecret match {
+          case Some( secret ) => sol.Bytes32( secret )
+          case None           => Commitment.newSecret()
+        }
+      }
       for {
         dController <- domainController
         hash        <- dController.view.makeCommitment( name, ethaddress(owner), secret )( Sender.Default )
@@ -446,6 +452,16 @@ class AsyncClient(
       }
       yield {
         txnInfo
+      }
+    }
+
+    def commitmentTimestamp( commitment : Commitment ) : Future[Instant] = {
+      for {
+        dController      <- domainController
+        unixTimeSeconds  <- dController.view.commitments( sol.Bytes32(commitment.hash.bytes) )( Sender.Default )
+      }
+      yield {
+        Instant.ofEpochSecond( unixTimeSeconds.widen.toValidLong )
       }
     }
 

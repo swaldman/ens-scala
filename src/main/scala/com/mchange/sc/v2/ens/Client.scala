@@ -210,9 +210,11 @@ class Client(
 
     def nameExpires( name : String ) : Option[Instant] = await( _inner.nameExpires( name ) )
 
-    def makeCommitment[T : EthAddress.Source]( name : String, owner : T ) : Commitment = await( _inner.makeCommitment( name, owner ) )
+    def makeCommitment[T : EthAddress.Source]( name : String, owner : T, mbSecret : Option[immutable.Seq[Byte]] = None ) : Commitment = await( _inner.makeCommitment( name, owner, mbSecret ) )
 
     def commit[S : EthSigner.Source]( signer : S, commitment : Commitment, forceNonce : Option[BigInt] = None ) : TransactionInfo = awaitTransactionInfo( _inner.commit( signer, commitment, forceNonce ) )
+
+    def commitmentTimestamp( commitment : Commitment ) : Instant = await( _inner.commitmentTimestamp( commitment ) )
 
     def register[S : EthSigner.Source, T : EthAddress.Source](
       signer : S,
