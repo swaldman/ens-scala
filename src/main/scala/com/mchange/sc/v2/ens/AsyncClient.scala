@@ -290,14 +290,14 @@ class AsyncClient(
       for {
         address <- assertedDomainRegistrarAddress
         registrar = new AsyncRegistrar( address )
-        supports <- registrar.view.supportsInterface( InterfaceId.NftRegistrar )( Sender.Default )
+        supports <- registrar.view.supportsInterface( InterfaceId.NftErc721 )( Sender.Default )
       }
       yield {
         if ( supports ) {
           registrar
         }
         else {
-          throw new BadRegistrarException( s"Putative registrar at 0xs{address.hex} does not support the expected NFT / ENS Registrar interface ( 0x${InterfaceId.NftRegistrar.widen.hex} )." )
+          throw new BadRegistrarException( s"Putative registrar at 0x${address.hex} does not support the expected NFT / ENS Registrar interface ( 0x${InterfaceId.NftErc721.widen.hex} )." )
         }
       }
     }

@@ -115,7 +115,9 @@ package object ens extends Denominations {
     deDotTld( name.toLowerCase ) ensuring ( _.indexOf('.') < 0, s"We expect a simple name (with no '.' characters) or else a <simple-name>.${tld}. Bad name: ${name}." )
   }
 
-  val StandardNameServiceAddress = EthAddress( "0x314159265dd8dbb310642f98f50c066173c1259b" )
+  val OldStandardNameServiceAddress = EthAddress( "0x314159265dd8dbb310642f98f50c066173c1259b" )
+
+  val StandardNameServiceAddress = EthAddress( "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e" )
 
   val StandardNameServiceDefaultPublicResolverName = "resolver.eth"
 
@@ -126,13 +128,15 @@ package object ens extends Denominations {
     val Controller                = sol.Bytes4("0x018fac06".decodeHex)
     val MigratableLegacyRegistrar = sol.Bytes4("0x7ba18ba1".decodeHex)
     val MultichainAddresses       = sol.Bytes4("0xf1cb7e06".decodeHex)
-    val NftRegistrar              = sol.Bytes4("0x6ccb2df4".decodeHex)
+    // val NftRegistrar            = sol.Bytes4("0x6ccb2df4".decodeHex)
+    val NftErc721                 = sol.Bytes4("0x80ac58cd".decodeHex)
 
     val Description = Map (
       Controller                -> "Controller",
       MigratableLegacyRegistrar -> "MigratableLegacyRegistrar",
       MultichainAddresses       -> "MultichainAddresses",
-      NftRegistrar              -> "NftRegistrar"
+      NftErc721                 -> "NftErc721"
+      // NftRegistrar              -> "NftRegistrar"
     )
   }
 
