@@ -1,11 +1,9 @@
 +++
-title = "Create Page"
+title= "{{ replace .TranslationBaseName "-" " " | title }}"
+date= {{ .Date }}
 description = ""
-
-[menu.main]
-parent = ""
-identifier = "XXX"
-weight = 20
+draft= true
 +++
 
-Lorem Ipsum
+Lorem Ipsum.
+Notice `draft` is set to true.
