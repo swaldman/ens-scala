@@ -2,11 +2,11 @@ name := "ens-scala"
 
 organization := "com.mchange"
 
-version := "0.3.0"
+version := "0.4.0-SNAPSHOT"
 
-scalaVersion := "2.12.10"
+scalaVersion := "2.12.13"
 
-crossScalaVersions := Seq("2.10.7", "2.11.12", "2.12.10")
+crossScalaVersions := Seq("2.10.7", "2.11.12", "2.12.13")
 
 resolvers += ("releases" at "https://oss.sonatype.org/service/local/staging/deploy/maven2")
 
