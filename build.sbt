@@ -21,68 +21,27 @@ resolvers += ("snapshots" at "https://oss.sonatype.org/content/repositories/snap
 
 ethcfgScalaStubsPackage := "com.mchange.sc.v2.ens.contract"
 
-// documentation stuff
-
-enablePlugins(TutPlugin)
-enablePlugins(PreprocessPlugin)
-enablePlugins(SiteScaladocPlugin)
-enablePlugins(HugoPlugin)
-
-// we set up a pipeline
-//
-//   tut -> preprocess -> hugo -> done
-
-val pipelineSourceDirectory = settingKey[File]("The directory from which the documentation pipeline begins.")
-val pipelineTarget          = settingKey[File]("The directory in which the completed, processed documentation will be placed.")
-
-pipelineSourceDirectory := ( sourceDirectory in Compile ).value / "site-pipeline"
-pipelineTarget := (target in makeSite).value // same as where Scaladoc goes
-
-tutSourceDirectory := pipelineSourceDirectory.value
-
-// make sure tut happens before preprocessing then let the preprocessor take file from tuts output
-
-preprocessVars in Preprocess := Map("VERSION" -> version.value)
-mappings in Preprocess := { ( ( mappings in Preprocess ) dependsOn ( tut ) ).value }
-sourceDirectory in Preprocess := tutTargetDirectory.value
-
-// make sure preprocess happens before hugo then let the hugo take file from preprocessor output
-
-baseURL in Hugo := uri(s"https://www.mchange.com/projects/${name.value}/")
-mappings in Hugo := { ( ( mappings in Hugo ) dependsOn ( mappings in Preprocess ) ).value }
-sourceDirectory in Hugo := (target in Preprocess).value
-target in Hugo := target.value / "hugo"
-
-pomIncludeRepository := {
-  val snapshot = isSnapshot.value
-
-  (repo: MavenRepository) => {
-    repo.name == "releases" || ( snapshot && repo.name == "snapshots" )
-  }
-}
-
-makeSite := {
-  val ensureHugoAndScaladoc = makeSite.value
-
-  val hugoPublicSite = (target in Hugo).value / "public"
-
-  IO.copyDirectory( hugoPublicSite, pipelineTarget.value, overwrite = true, preserveLastModified = false )
-
-  ensureHugoAndScaladoc // evaluate to the same directory as it would have, which is now the merged directory
-}
+enablePlugins(ParadoxPlugin)
 
 val updateSite = taskKey[Unit]("Updates the project website on tickle")
 
 updateSite := {
   import scala.sys.process._
 
-  val dummy = makeSite.value // force a build of the site
+  val dummy1 = (Compile / paradox).value // force a build of the site
 
-  val localDir = pipelineTarget.value
+  val localDir1 = target.value / "paradox" / "site" / "main"
 
-  val local = localDir.listFiles.map( _.getPath ).mkString(" ")
-  val remote = s"tickle.mchange.com:/home/web/public/www.mchange.com/projects/${name.value}-versions/${version.value}"
-  s"rsync -avz ${local} ${remote}"!
+  val local1 = localDir1.listFiles.map( _.getPath ).mkString(" ")
+  val remote1 = s"tickle.mchange.com:/home/web/public/www.mchange.com/projects/${name.value}-versions/${version.value}/"
+  s"rsync -avz ${local1} ${remote1}"!
+
+  val dummy2 = (Compile / doc).value // force scaladocs
+
+  val localDir2 = target.value / "scala-2.12" / "api"
+  val local2 = localDir2.listFiles.map( _.getPath ).mkString(" ")
+  val remote2 = s"tickle.mchange.com:/home/web/public/www.mchange.com/projects/${name.value}-versions/${version.value}/apidocs"
+  s"rsync -avz ${local2} ${remote2}"!
 }
 
 val nexus = "https://oss.sonatype.org/"
