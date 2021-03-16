@@ -4,7 +4,7 @@ resolvers += Resolver.mavenLocal
 // only necessary while using a SNAPSHOT version of sbt-ethereum
 resolvers += ("snapshots" at "https://oss.sonatype.org/content/repositories/snapshots")
 
-addSbtPlugin("com.mchange" % "sbt-ethereum" % "0.5.0-SNAPSHOT" changing())
+addSbtPlugin("com.mchange" % "sbt-ethereum" % "0.5.2-SNAPSHOT" changing())
 addSbtPlugin("com.lightbend.paradox" % "sbt-paradox" % "0.4.4")
 
 
